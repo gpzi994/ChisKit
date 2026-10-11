@@ -1,0 +1,14 @@
+# Build products only; the complete SDK and OS sources remain tracked.
+/build/
+/output_files/
+/quartus/output_files/
+/quartus/db/
+/quartus/incremental_db/
+/.integration/openfpgaos/bld/
+/.integration/openfpgaos/build/
+__pycache__/
+*.pyc
+*.qws
+/.venv/
+# Release archives belong in GitHub Releases, not the source tree.
+*.zip

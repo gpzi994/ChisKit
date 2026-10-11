@@ -1,0 +1,9 @@
+ChisBurner
+
+GBA ROM high-address read-only field diagnostic.
+
+This build permits exactly two passes over eleven fixed 32-byte ROM windows:
+the ChisBurner power-of-two mirror-probe sequence from 0x000000A0 through
+0x010000A0, plus 0x01FFFFE0. It reports the observed mirror size as information
+and requires every sampled byte to repeat. Cartridge writes and save-memory
+transactions are unavailable.

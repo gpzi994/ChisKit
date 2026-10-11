@@ -1,0 +1,6 @@
+ChisBurner
+
+GBA ROM header read-only field diagnostic.
+
+Version: 0.1.0-smoke.25-gba-header
+Reads only 0xA0-0xBF twice. Cartridge writes are structurally absent.

@@ -1,0 +1,2028 @@
+//------------------------------------------------------------------------------
+// SPDX-License-Identifier: Apache-2.0
+// SPDX-FileType: SOURCE
+// SPDX-FileCopyrightText: (c) 2026, ThinkElastic <Think@Elastic.com>
+//------------------------------------------------------------------------------
+
+/*
+ * openfpgaOS File HAL Implementation
+ * Low-level APF bridge file I/O
+ */
+
+#include "file.h"
+#include "disk.h"
+#include "audio.h"
+#include "mixer.h"
+#include "cache.h"
+#include "regs.h"
+#include "save.h"
+#include "terminal.h"
+#include <string.h>
+
+#if CHISBURNER_PSRAM127
+#include "file122.h"
+#endif
+
+#define DMA_TIMEOUT         200000000   /* ~2 seconds at 100MHz */
+#define DMA_CACHE_LINE_SIZE 64u
+
+#ifndef OF_TARGET_CRAM0_DMA_CHUNK_SIZE
+#define OF_TARGET_CRAM0_DMA_CHUNK_SIZE DMA_CHUNK_SIZE
+#endif
+
+/* Idle hook — called during any blocking wait (DMA, bridge, etc.)
+ * Apps register this via OF_SYS_SET_IDLE_HOOK to do background
+ * work (audio pump, input polling) during file I/O, INCLUDING during app
+ * reads (which run in trap context with MIE clear).
+ *
+ * CONTRACT: the hook MUST be entirely ecall-free (no syscalls at all). It runs
+ * in trap context during app reads, so any ecall it issued would trap and
+ * clobber the single BRAM trap frame of the outer read. See call_idle_hook(). */
+static void (*idle_hook)(void);
+
+/* Forward decl: bridge backend implementation lives below, but
+ * of_file_init's warmup DMA needs to call it directly. */
+static int bridge_read_impl(uint32_t slot_id, uint32_t slot_offset,
+                            void *dest, uint32_t length);
+long of_file_size(uint32_t slot_id);
+static int bridge_warmed;
+static int bridge_warmup_active;
+
+/* Async data-slot read state. Completion is IRQ-driven on Pocket hardware;
+ * of_file_async_poll() and the 1 kHz kernel tick (of_file_async_tick) are
+ * fallback drains for lost IRQs.  `active` stays set from issue until the
+ * app-facing completion (callback fired / poll returned), which for a
+ * non-CRAM0 destination includes the deferred bounce copy — the bridge
+ * itself is free once `copy_pending` is set. */
+static struct {
+    volatile int      active;
+    volatile uint32_t completed_count;
+    int               token;
+    uint32_t          length;
+    void             *dest;
+    void             *dma_dest;
+    int               bounce_to_dest;
+    void            (*callback)(int token, int result);
+    volatile int      copy_pending;   /* DMA done, bounce copy in progress */
+    volatile uint32_t copy_off;       /* bounce copy progress in bytes     */
+    int               copy_result;
+    volatile uint32_t age_ms;         /* 1 kHz ticks with no DONE (watchdog) */
+} async_state;
+
+/* Local IRQ mask save/restore for tick-vs-app-context critical sections
+ * (same pattern as kernel/syscall.c). */
+static inline uint32_t file_irq_save(void)
+{
+    uint32_t prev;
+    __asm__ volatile("csrrci %0, mstatus, 0x8" : "=r"(prev) :: "memory");
+    return prev & 0x8u;
+}
+
+static inline void file_irq_restore(uint32_t prev)
+{
+    if (prev)
+        __asm__ volatile("csrrsi zero, mstatus, 0x8" ::: "memory");
+}
+
+static int async_token_counter;
+static uint32_t dma_stage_next;
+#if CHISBURNER_PSRAM127
+static volatile uint32_t sdram127_cram_violation;
+
+static void sdram127_audit_cram_traffic(void) {
+    uint32_t wc = DS_BRIDGE_WCNT;
+    if ((wc & DS_BWC_CRAM0_MASK) ||
+        (wc & (DS_BWC_CRAM0_DROPPED | DS_BWC_CRAM0_OVERRUN)))
+        sdram127_cram_violation |= wc | 1u;
+}
+#endif
+
+static int addr_in_range(uint32_t addr, uint32_t length,
+                         uint32_t base, uint32_t size) {
+    return addr >= base && length <= size && addr <= base + size - length;
+}
+
+#if !CHISBURNER_PSRAM127
+static int addr_in_sdram(uint32_t addr, uint32_t length) {
+    return addr_in_range(addr, length, SDRAM_BASE, SDRAM_SIZE) ||
+           addr_in_range(addr, length, SDRAM_UNCACHED_BASE, SDRAM_SIZE);
+}
+
+static int bridge_addr_targets_cram0(uint32_t bridge_addr, uint32_t length) {
+    return addr_in_range(bridge_addr, length, CRAM0_BRIDGE, CRAM_SIZE);
+}
+#endif
+
+/* OS image trailer magic stamped by append_os_crc.py ('OFC1' read back as a
+ * little-endian word).  Mirrors OS_CRC_MAGIC in boot/boot.c; the trailer is
+ * the only CPU-known ground truth a bridge read can be checked against. */
+#define OS_BIN_SLOT_ID    1u
+#define OS_BIN_CRC_MAGIC  0x3143464Fu
+
+static void bridge_warmup_once(void) {
+    if (bridge_warmed || bridge_warmup_active)
+        return;
+
+#if CHISBURNER_PSRAM127
+    /* Direct-SDRAM boot already exercised and verified the transport. */
+    bridge_warmed = 1;
+    return;
+#else
+    bridge_warmup_active = 1;
+    /* Boot breadcrumb: visible only if the warmup wedges — a successful
+     * boot clears the terminal right before the banner.  A blank screen
+     * WITHOUT this line means the kernel never reached the file layer. */
+    of_term_printf("[file] smoke.38 skip\n");
+    (void)bridge_read_impl(1, 0, (void *)CRAM0_SCRATCH, 4);
+    of_cache_flush_dcache();
+
+    /* F1 mirror (bridge-corruption forensics 2026-06): one-shot trailer
+     * verify of the bridge leg.  After a UART/PHDP boot the boot ROM's
+     * BRG-warmup gate never ran, so a cold bridge can reach here still
+     * corrupting bulk reads — and the first visible symptom used to be a
+     * mysterious os.ini parse failure.  Read the last 8 bytes of the
+     * os.bin slot (its 'OFC1' CRC trailer) through the exact failing leg
+     * (bridge RX -> write FIFO -> CRAM0 scratch bounce) and say so
+     * explicitly if the magic comes back wrong.  Diagnostic only: the
+     * boot path stays unchanged either way. */
+    long os_size = of_file_size(OS_BIN_SLOT_ID);
+    if (os_size >= 8) {
+        uint32_t trailer[2] = { 0u, 0u };
+        int rc = bridge_read_impl(OS_BIN_SLOT_ID, (uint32_t)os_size - 8u,
+                                  trailer, 8u);
+        if (rc == 0 && trailer[0] != OS_BIN_CRC_MAGIC)
+            of_term_printf("[file] bridge leg corrupt: os.bin trailer "
+                           "%08x != %08x (W=%08x)\n",
+                           (unsigned)trailer[0],
+                           (unsigned)OS_BIN_CRC_MAGIC,
+                           (unsigned)DS_BRIDGE_WCNT);
+    }
+
+    bridge_warmup_active = 0;
+    bridge_warmed = 1;
+#endif
+}
+
+void of_file_set_idle_hook(void (*hook)(void)) {
+    idle_hook = hook;
+}
+
+/* Instance roots and in-OS relaunch are MiSTer features.  On the Pocket the
+ * Analogue host supplies per-instance nonvolatile files and switches games by
+ * reloading the core, so these are inert no-ops here (shared by the sim
+ * target, which #includes this file).  Defined so the HAL contract resolves
+ * on every target without changing any Pocket behavior. */
+void of_file_set_instance_root(const char *root) { (void)root; }
+const char *of_file_get_instance_root(void) { return ""; }
+void of_file_set_common_root(const char *root) { (void)root; }
+const char *of_file_get_common_root(void) { return ""; }
+void of_file_relaunch_reset(void) {}
+int of_file_list_instances(char *names, uint32_t stride, uint32_t max) {
+    (void)names; (void)stride; (void)max; return 0;
+}
+/* Registry-miss by-name resolution is a MiSTer (FAT volume) feature; APF
+ * enumerates every data slot up front, so there is nothing to fall back to. */
+int of_file_resolve_name(const char *name) { (void)name; return -1; }
+/* By-name config write slots are likewise MiSTer-only (preallocated FAT
+ * /config files); Pocket settings ride the fixed APF nonvolatile slots. */
+int of_file_config_slot(const char *name) { (void)name; return -1; }
+/* Boot-complete transport-policy hook: MiSTer arms its DS ERR_TIMEOUT
+ * retry loop here; the APF bridge needs no boot/operational split. */
+void of_file_boot_complete(void) {}
+/* Instance-selection gate is a MiSTer (F-load) feature; the Analogue host
+ * hands the picked instance's files to the core directly, so Pocket/sim are
+ * always ready to launch. */
+int of_file_instance_ready(void) { return 1; }
+/* F-load app-from-staging is a MiSTer-only feature (loose-file app.elf DMA'd
+ * into an SDRAM staging window); Pocket/sim resolve the app ELF from a data
+ * slot the host supplies, so there is never a staging override. */
+int of_file_app_from_staging(void) { return 0; }
+uint32_t of_file_app_staging_len(void) { return 0u; }
+
+void of_file_init(void) {
+    idle_hook = (void *)0;
+    bridge_warmed = 1;
+    bridge_warmup_active = 0;
+    async_state.active = 0;
+    async_state.completed_count = 0;
+    async_state.token = 0;
+    async_state.length = 0;
+    async_state.dest = (void *)0;
+    async_state.dma_dest = (void *)0;
+    async_state.bounce_to_dest = 0;
+    async_state.callback = (void *)0;
+    async_token_counter = 0;
+    dma_stage_next = 0;
+#if CHISBURNER_PSRAM127
+    sdram127_cram_violation = 0;
+#endif
+
+#if OF_TARGET_PLATFORM_ID == OF_PLATFORM_SIM
+    /* Sim has no bridge model — the warmup DMA below would hang
+     * forever waiting for ack/done from a non-existent peer. */
+    return;
+#endif
+    IRQ_MASK &= ~IRQ_MASK_DATASLOT;
+    DS_STATUS = DS_STATUS_IRQ_PENDING;
+
+    /* smoke.38 isolation: leave the optional self-read disabled so visible
+     * HAL breadcrumbs can identify the first later stage that wedges. */
+    if (of_disk_active() == &of_disk_bridge)
+        of_term_printf("[file] smoke.38 skip\n");
+}
+
+/* Check for shutdown handshake: if the bridge wants to shut down,
+ * hand CRAM0 back to the bridge, flush D-cache (framebuffer/DMA data
+ * in SDRAM), and acknowledge so the bridge can proceed with reset.
+ * Save data in CRAM0 does not need cache flushing — CRAM0 is uncached
+ * per PMA — but the bridge must own the CRAM0 mux before the Pocket
+ * nonvolatile exit writeback reads the save window. */
+void of_check_shutdown(void) {
+    if (SYS_SHUTDOWN & SHUTDOWN_PENDING) {
+#if CHISBURNER_PSRAM127
+        /* Persistent data has already been sent through the SDRAM snapshot
+         * path.  CRAM0 is the ROM cache: never wipe or mode-switch it. */
+        fence();
+        of_cache_flush_dcache();
+        SYS_SHUTDOWN = SHUTDOWN_ACK;
+        while (SYS_SHUTDOWN & SHUTDOWN_PENDING) {}
+#else
+        /* Security wipe: scrub the non-save CRAM0 regions (stale boot copy of
+         * os.bin, DMA scratch, app file-staging pool) so transient loaded data
+         * cannot survive a warm reset.  Runs here, before the mux is handed to
+         * the bridge, because the CPU can no longer write CRAM0 afterwards.
+         * It preserves the presave + save window, which the bridge persists to
+         * SD right after the ACK below. */
+        of_save_security_wipe();
+        fence();
+        CRAM0_MODE = CRAM0_MODE_BRIDGE;
+        for (volatile int s = 0; s < 8; s++) {}
+        fence();
+        of_cache_flush_dcache();
+        SYS_SHUTDOWN = SHUTDOWN_ACK;
+        while (SYS_SHUTDOWN & SHUTDOWN_PENDING) {
+            /* Do not resume app code after handing CRAM0 to the bridge. */
+        }
+#endif
+    }
+}
+
+/* Call the idle hook safely. Hooks may issue syscalls only when this wait is
+ * running from normal context; while already inside a file syscall trap, MIE is
+ * clear and we skip the hook to avoid overwriting the outer BRAM trap frame.
+ * Note: the hook must NOT use syscalls that trigger file I/O, since that would
+ * recurse into file_wait_complete().
+ *
+ * Do NOT drop the MIE gate to make the hook fire during app reads -- it was
+ * tried and regressed steady-state audio on HW; feed app audio across loads
+ * app-side instead. */
+static inline void call_idle_hook(void) {
+    if (!idle_hook) return;
+
+    uint32_t mstatus;
+    __asm__ volatile("csrr %0, mstatus" : "=r"(mstatus));
+    if ((mstatus & 0x8u) == 0)
+        return;
+
+    /* Save trap CSRs that ecall would clobber */
+    uint32_t saved_mepc, saved_mcause, saved_mtval;
+    __asm__ volatile("csrr %0, mepc"   : "=r"(saved_mepc));
+    __asm__ volatile("csrr %0, mcause" : "=r"(saved_mcause));
+    __asm__ volatile("csrr %0, mtval"  : "=r"(saved_mtval));
+
+    idle_hook();
+
+    /* Restore trap CSRs */
+    __asm__ volatile("csrw mepc, %0"   :: "r"(saved_mepc));
+    __asm__ volatile("csrw mcause, %0" :: "r"(saved_mcause));
+    __asm__ volatile("csrw mtval, %0"  :: "r"(saved_mtval));
+}
+
+static int file_op_count;
+#if CHISBURNER_PSRAM127
+uint32_t of_file_psram0_violation(void) {
+    sdram127_audit_cram_traffic();
+    return sdram127_cram_violation;
+}
+#endif
+
+/* ---- Command dispatch with acceptance verification -----------------------
+ * The DS_COMMAND dispatch guard (axi_periph_slave.v) silently ignores the
+ * write while the previous command's request lines or target_ack_s are still
+ * up.  DS_STATUS carries no ds_cmd_active bit, so an "ACK yet?" probe CANNOT
+ * tell a dropped write from an accepted command whose host ACK (ms-scale,
+ * host-paced) hasn't arrived: the old ~100-iteration probe false-negatived
+ * on ACCEPTED commands issued right after prior bridge traffic, unwound the
+ * async state with the DMA still in flight, and the app's sync-read fallback
+ * then adopted the zombie command's completion (the doom1/doom2 music
+ * sync-livelock, `issue fail tok=-12`).
+ *
+ * What IS observable µs after the write: an accepted command RESETS the
+ * per-command ACK/DONE status latches (DS_STATUS bits 0/1), and every
+ * completed command leaves at least ACK latched high — so capture DS_STATUS
+ * right before the write and treat those bits clearing as acceptance,
+ * independent of host latency.  Fallback proofs: the ACK latch setting, or
+ * READY dropping (= target_ack_s up).  Retrying an indeterminate command is
+ * safe: if it WAS accepted, its request lines stay up for the whole host
+ * round trip (~25 ms) and the guard refuses the duplicate.
+ *
+ * The quiet pre-wait is time-bounded (not iteration-bounded) so it spans
+ * the full CDC deassertion window; on expiry the bridge is genuinely
+ * busy/owned and the caller gets OF_ERR_BUSY (defer), never a wedge. */
+#define DS_ISSUE_PROBE_US    50u    /* acceptance confirmation probe bound */
+
+static inline uint32_t us_to_cycles(uint32_t us) {
+    return (CPU_FREQ_HZ / 1000000u) * us;
+}
+
+/* Issue a DS command the way the field-proven firmware always has: fire
+ * once, probe briefly, retry once if nothing was observed, and PROCEED
+ * REGARDLESS.  Never fails.
+ *
+ * The probe is confirmation-only.  Device evidence (doom1 CD music,
+ * `issue fail tok=-12` persisting through the latch-reset detector): an
+ * ACCEPTED command can present exactly like a dropped one for its whole
+ * host round trip — READY high, ACK/DONE latches unchanged — so there is
+ * NO reliable CPU-visible acceptance indicator in the current RTL (no
+ * ds_cmd_active bit in DS_STATUS).  Treating an unconfirmed issue as an
+ * error therefore false-negatives on live commands; the old async unwind
+ * on that false negative orphaned the in-flight DMA and the app's
+ * sync-read fallback adopted the zombie's completion (the music
+ * sync-livelock).  So: on the sync path a genuine drop is caught by
+ * file_wait_complete's timeout, on the async path by the age-out
+ * watchdog.  The single blind retry matches the legacy code (a duplicate
+ * of an accepted in-flight command is refused by the dispatch guard while
+ * its request lines are up, i.e. for the whole ~25 ms round trip).
+ * A real acceptance bit in DS_STATUS is the RTL fix.
+ *
+ * Deliberately NO idle pre-wait here: callers own their own tolerance
+ * (sync paths block DMA_TIMEOUT-long, the async path defers with a short
+ * bound).  An earlier version re-gated on READY|WR_IDLE with a 2 ms
+ * budget and broke BOOT: at kernel start the APF host is still
+ * auto-loading nonvolatile slots (WR_IDLE low for long stretches), the
+ * outer wait exits in a momentary gap, and the 2 ms re-check then failed
+ * the warmup/os.ini reads outright — loading → black screen. */
+static int ds_issue_command(uint32_t cmd) {
+    for (int attempt = 0; attempt < 2; attempt++) {
+        uint32_t pre = DS_STATUS & (DS_STATUS_ACK | DS_STATUS_DONE);
+        fence();
+        DS_COMMAND = cmd;
+        fence();
+
+        uint64_t start = read_cycles();
+        for (;;) {
+            uint32_t st = DS_STATUS;
+            if (pre && (st & pre) != pre)
+                return 0;               /* latches reset -> accepted        */
+            if (st & DS_STATUS_ACK)
+                return 0;               /* ACK latched for this command     */
+            if (!(st & DS_STATUS_READY))
+                return 0;               /* target_ack_s up -> host acked    */
+            if (read_cycles() - start > us_to_cycles(DS_ISSUE_PROBE_US))
+                break;
+        }
+    }
+    return 0;                           /* unconfirmed — proceed anyway     */
+}
+
+/* Serialize against the async machinery.  A DMA in flight owns the bridge:
+ * callers must defer (OF_ERR_BUSY).  A pending deferred bounce copy does
+ * NOT own the bridge — finish it inline (bounded <= one chunk) and let the
+ * caller proceed, so sync file I/O never bounces off a completed-but-
+ * uncopied async read. */
+static void async_copy_drain(void);
+
+static int async_gate(void) {
+    if (async_state.copy_pending) {
+        async_copy_drain();
+        return 0;
+    }
+    return async_state.active ? OF_ERR_BUSY : 0;
+}
+
+static int file_wait_complete_mask(uint32_t success_mask) {
+    uint32_t timeout;
+
+    file_op_count++;
+
+    /* Wait for ACK */
+    timeout = DMA_TIMEOUT;
+    while (!(DS_STATUS & DS_STATUS_ACK)) {
+        if (--timeout == 0) {
+            of_term_printf("[ACK timeout #%d st=%02x]\n",
+                        file_op_count, DS_STATUS & 0x3F);
+            return OF_ERR_TIMEOUT;
+        }
+        if ((timeout & 0x3FF) == 0)
+            call_idle_hook();
+    }
+
+    /* Wait for DONE */
+    timeout = DMA_TIMEOUT;
+    while (!(DS_STATUS & DS_STATUS_DONE)) {
+        if (--timeout == 0) {
+            of_term_printf("[bridge timeout DONE #%d st=%02x]\n",
+                        file_op_count, DS_STATUS & 0x3F);
+            return OF_ERR_TIMEOUT;
+        }
+        if ((timeout & 0x3FF) == 0)
+            call_idle_hook();
+    }
+
+    /* Capture the host result, but always wait for READY/WR_IDLE below.
+     * OPENFILE result 1 means "created and opened", so callers may include
+     * that result in success_mask. */
+    uint32_t err = (DS_STATUS & DS_STATUS_ERR_MASK) >> DS_STATUS_ERR_SHIFT;
+
+    /* Wait for bridge to return to idle (ACK cleared via CDC).
+     * Without this, the next command can be silently dropped because
+     * the dispatch guard sees target_ack_s still high. */
+    timeout = DMA_TIMEOUT;
+    while (!(DS_STATUS & DS_STATUS_READY)) {
+        if (--timeout == 0) {
+            of_term_printf("[bridge timeout READY #%d st=%02x]\n",
+                        file_op_count, DS_STATUS & 0x7F);
+            return OF_ERR_TIMEOUT;
+        }
+    }
+
+    /* Wait for all bridge write data to drain to memory.
+     * READY means the command state machine is idle, but SDRAM skid
+     * buffer and CRAM0 write queue may still have pending data.
+     * WR_IDLE = skid empty + bridge master idle + CRAM0 idle. */
+    timeout = DMA_TIMEOUT;
+    while (!(DS_STATUS & DS_STATUS_WR_IDLE)) {
+        if (--timeout == 0) {
+            of_term_printf("[bridge timeout WR_IDLE #%d st=%02x]\n",
+                        file_op_count, DS_STATUS & 0x7F);
+            return OF_ERR_TIMEOUT;
+        }
+    }
+
+#if CHISBURNER_PSRAM127
+    sdram127_audit_cram_traffic();
+#endif
+
+    /* CRAM0 ingress FIFO overrun guard.  The CRAM0 chunk cap was raised above
+     * the 4 KB FIFO depth on the premise that the host delivers SD-paced (so
+     * the FIFO smooths jitter, not whole-burst) — proven by the 256 KB save
+     * slots auto-loading through this same FIFO.  This catches the case where
+     * that premise fails for a commanded read: the sticky bit is set and words
+     * were dropped, so the transfer is corrupt.  The bit clears on the next
+     * command issue, so here it describes the command that just completed; only
+     * reads-into-CRAM0 can set it (SDRAM reads + all writes leave it 0), so
+     * this is a safe global guard. */
+    if (DS_BRIDGE_WCNT & DS_BWC_CRAM0_OVERRUN) {
+        of_term_printf("[CRAM0 FIFO overrun #%d wcnt=%08x]\n",
+                       file_op_count, (unsigned)DS_BRIDGE_WCNT);
+        DS_STATUS = DS_STATUS_IRQ_PENDING;   /* clear W1C pending like the other exits */
+        return OF_ERR_IO;
+    }
+
+    DS_STATUS = DS_STATUS_IRQ_PENDING;
+    return (success_mask & (1u << err)) ? 0 : -((int)err);
+}
+
+static int file_wait_complete(void) {
+    return file_wait_complete_mask(1u << 0);
+}
+
+#if CHISBURNER_PSRAM127
+/* Production SDRAM data-slot transport.  The reservation/snapshot block was
+ * proven by smoke.126 and is now the only legal APF payload path in a
+ * PSRAM127 build.  In particular, none of these helpers has a CRAM fallback. */
+#define SDRAM127_MMIO_BASE  0x40000200u
+#define SDRAM127_LOCK_POLLS 2000000u
+
+static uint32_t sdram127_mmio_read(void *ctx, uint32_t off) {
+    (void)ctx;
+    return REG32(SDRAM127_MMIO_BASE + off);
+}
+
+static void sdram127_mmio_write(void *ctx, uint32_t off, uint32_t value) {
+    (void)ctx;
+    fence();
+    REG32(SDRAM127_MMIO_BASE + off) = value;
+    fence();
+}
+
+static const struct cb_sd117_io sdram127_mmio = {
+    .ctx = 0,
+    .read = sdram127_mmio_read,
+    .write = sdram127_mmio_write,
+};
+static int sdram127_apf_result;
+
+static uint32_t sdram127_cached_addr(uint32_t addr) {
+    if (addr >= SDRAM_UNCACHED_BASE && addr < SDRAM_UNCACHED_BASE + SDRAM_SIZE)
+        return addr - SDRAM_UNCACHED_BASE + SDRAM_BASE;
+    return addr;
+}
+
+static int sdram127_map_error(int rc) {
+    switch (rc) {
+    case CB_SD117_OK:      return 0;
+    case CB_SD117_BUSY:    return OF_ERR_BUSY;
+    case CB_SD117_TIMEOUT: return OF_ERR_TIMEOUT;
+    case CB_SD117_RANGE:   return OF_ERR_BAD_RANGE;
+    default:               return OF_ERR_IO;
+    }
+}
+
+/* Callback used by cb_sd122_transfer after it has temporarily released host
+ * admission.  It must issue exactly one APF command and must not recurse into
+ * the public wrappers (which would try to reserve the bridge again). */
+static int sdram127_apf_transfer(void *ctx, int write, uint32_t slot_id,
+                                 uint32_t slot_offset, uint32_t address,
+                                 uint32_t length) {
+    (void)ctx;
+    uint32_t wait = DMA_TIMEOUT;
+    while ((DS_STATUS & (DS_STATUS_READY | DS_STATUS_WR_IDLE)) !=
+           (DS_STATUS_READY | DS_STATUS_WR_IDLE)) {
+        if (--wait == 0)
+            return OF_ERR_TIMEOUT;
+        if ((wait & 0x3ffu) == 0)
+            call_idle_hook();
+    }
+
+    DS_SLOT_ID = slot_id;
+    DS_SLOT_OFFSET = slot_offset;
+    DS_BRIDGE_ADDR = address;
+    DS_LENGTH = length;
+    if (ds_issue_command(write ? DS_CMD_WRITE : DS_CMD_READ) < 0)
+        return OF_ERR_IO;
+    sdram127_apf_result = file_wait_complete();
+    /* A timeout may still have a live host transaction, so tell the generic
+     * transport to retain ownership/snapshot.  A completed APF result error
+     * is safe to tear down and is returned after that teardown. */
+    return sdram127_apf_result == OF_ERR_TIMEOUT ? OF_ERR_TIMEOUT : 0;
+}
+
+static const struct cb_sd122_io sdram127_io = {
+    .mmio = { .ctx = 0, .read = sdram127_mmio_read,
+              .write = sdram127_mmio_write },
+    .transfer = sdram127_apf_transfer,
+};
+
+static int sdram127_transfer(int write, uint32_t slot_id,
+                             uint32_t slot_offset, uint32_t address,
+                             uint32_t length) {
+    address = sdram127_cached_addr(address);
+    if (!addr_in_range(address, length, SDRAM_BASE, SDRAM_SIZE) ||
+        (address & (DMA_CACHE_LINE_SIZE - 1u)) != 0 ||
+        length == 0 || length > DMA_CHUNK_SIZE)
+        return OF_ERR_BAD_RANGE;
+
+    void *p = (void *)(uintptr_t)address;
+    if (write) {
+        of_cache_clean_range(p, length);
+        fence();
+    } else {
+        /* The dedicated buffers never share a dirty cache line with live
+         * objects.  Drop stale lines both before and after host ingress. */
+        of_cache_inval_range(p, length);
+        fence();
+    }
+
+    sdram127_apf_result = 0;
+    int rc = cb_sd122_transfer(&sdram127_io, write, slot_id, slot_offset,
+                               address, length, SDRAM127_LOCK_POLLS);
+    if (rc)
+        return sdram127_map_error(rc);
+
+    if (!write) {
+        fence();
+        of_cache_inval_range(p, length);
+        fence();
+    }
+    return sdram127_apf_result;
+}
+
+/* Inbound APF commands other than READ (currently GETFILE) still write a
+ * caller-owned SDRAM response.  They need the same admission hand-off, but
+ * no snapshot. */
+static int sdram127_inbound_command(uint32_t command, uint32_t slot_id,
+                                    uint32_t response_addr) {
+    int rc = cb_sd122_lock(&sdram127_mmio, 1, SDRAM127_LOCK_POLLS);
+    if (rc) return sdram127_map_error(rc);
+    rc = cb_sd122_lock(&sdram127_mmio, 0, SDRAM127_LOCK_POLLS);
+    if (rc) return sdram127_map_error(rc);
+
+    DS_SLOT_ID = slot_id;
+    DS_RESP_ADDR = response_addr;
+    rc = ds_issue_command(command);
+    if (!rc) rc = file_wait_complete();
+    int apf_rc = rc;
+    if (rc == OF_ERR_TIMEOUT) return rc;
+
+    rc = cb_sd122_lock(&sdram127_mmio, 1, SDRAM127_LOCK_POLLS);
+    if (rc) return sdram127_map_error(rc);
+    rc = cb_sd122_lock(&sdram127_mmio, 0, SDRAM127_LOCK_POLLS);
+    if (rc) return sdram127_map_error(rc);
+    return apf_rc;
+}
+
+/* OPENFILE consumes a parameter structure.  Snapshot it into the bridge's
+ * read-only egress window so the host never reads live SDRAM or CRAM0. */
+static int sdram127_outbound_command(uint32_t command, uint32_t slot_id,
+                                     uint32_t param_addr, uint32_t param_len,
+                                     uint32_t success_mask) {
+    param_addr = sdram127_cached_addr(param_addr);
+    of_cache_clean_range((void *)(uintptr_t)param_addr, param_len);
+    fence();
+
+    int rc = cb_sd122_lock(&sdram127_mmio, 1, SDRAM127_LOCK_POLLS);
+    if (rc) return sdram127_map_error(rc);
+    rc = cb_sd117_prepare(&sdram127_mmio, param_addr, param_len,
+                          SDRAM127_LOCK_POLLS);
+    if (rc) return sdram127_map_error(rc);
+    rc = cb_sd122_lock(&sdram127_mmio, 0, SDRAM127_LOCK_POLLS);
+    if (rc) return sdram127_map_error(rc);
+
+    DS_SLOT_ID = slot_id;
+    DS_PARAM_ADDR = 0x21000000u;
+    rc = ds_issue_command(command);
+    if (!rc) rc = file_wait_complete_mask(success_mask);
+    int apf_rc = rc;
+    if (rc == OF_ERR_TIMEOUT) return rc;
+
+    rc = cb_sd122_lock(&sdram127_mmio, 1, SDRAM127_LOCK_POLLS);
+    if (rc) return sdram127_map_error(rc);
+    rc = cb_sd117_release(&sdram127_mmio, SDRAM127_LOCK_POLLS);
+    if (rc) return sdram127_map_error(rc);
+    rc = cb_sd122_lock(&sdram127_mmio, 0, SDRAM127_LOCK_POLLS);
+    if (rc) return sdram127_map_error(rc);
+    return apf_rc;
+}
+#endif
+
+/* Bridge backend implementation for the disk HAL. Exported through
+ * of_disk_bridge so the dispatcher in hal/disk.c can route reads
+ * here when the boot ROM disk channel is unavailable. */
+static int bridge_read_impl(uint32_t slot_id, uint32_t slot_offset,
+                             void *dest, uint32_t length) {
+    if (!bridge_warmup_active)
+        bridge_warmup_once();
+
+    uint32_t dest_addr = (uintptr_t)dest;
+    uint8_t *dst = (uint8_t *)dest;
+#if CHISBURNER_PSRAM127
+    (void)dest_addr;
+    uint32_t done = 0;
+    while (done < length) {
+        uint32_t chunk = length - done;
+        if (chunk > DMA_CHUNK_SIZE)
+            chunk = DMA_CHUNK_SIZE;
+
+        uint32_t current = (uint32_t)(uintptr_t)(dst + done);
+        uint32_t cached = sdram127_cached_addr(current);
+        if (addr_in_range(cached, chunk, SDRAM_BASE, SDRAM_SIZE) &&
+            (cached & (DMA_CACHE_LINE_SIZE - 1u)) == 0) {
+            int rc = of_file_read_raw(slot_id, slot_offset + done,
+                                      cached, chunk);
+            if (rc < 0)
+                return rc;
+        } else {
+            uint32_t scratch = OF_TARGET_SDRAM_FILE_SCRATCH_ADDR;
+            int rc = of_file_read_raw(slot_id, slot_offset + done,
+                                      scratch, chunk);
+            if (rc < 0)
+                return rc;
+            memcpy(dst + done, (const void *)(uintptr_t)scratch, chunk);
+        }
+        done += chunk;
+    }
+    return 0;
+#else
+    int direct_cram0 = (dest_addr >= CRAM0_BASE)
+                    && (length <= CRAM_SIZE)
+                    && (dest_addr <= CRAM0_BASE + CRAM_SIZE - length);
+    int direct_sdram = addr_in_sdram(dest_addr, length);
+
+    /* v2 arch: CRAM1 retired, scratch moved to CRAM0.  CRAM0 is
+     * uncached per PMA, so no D-cache invalidation is needed around
+     * bridge-written data there. */
+
+    uint32_t done = 0;
+    while (done < length) {
+        uint32_t chunk = length - done;
+        int rc;
+
+        /* SDRAM destinations ALWAYS route through the CRAM0 bounce + CPU memcpy.
+         * The direct bridge_to_sdram write path corrupts the loaded image on
+         * silicon (verified: sparse single-bit flips, HW-verify pending), so it
+         * is disabled until that RTL is fixed.  The bounce is cache-coherent by
+         * construction — the CPU memcpy stores through the cache — so no cbo
+         * invalidation is needed (the old bridge-direct write bypassed the cache
+         * and required it).  Any alignment works, so no head/tail splitting. */
+        if (direct_sdram && !direct_cram0) {
+            if (chunk > OF_TARGET_CRAM0_DMA_CHUNK_SIZE)
+                chunk = OF_TARGET_CRAM0_DMA_CHUNK_SIZE;
+            goto bounce_via_cram0;
+        }
+
+        if (chunk > OF_TARGET_CRAM0_DMA_CHUNK_SIZE)
+            chunk = OF_TARGET_CRAM0_DMA_CHUNK_SIZE;
+
+        CRAM0_MODE = CRAM0_MODE_BRIDGE;
+        for (volatile int s = 0; s < 8; s++) {}
+
+        uint32_t bridge_addr = direct_cram0
+            ? cpu_to_bridge(dst + done)
+            : CRAM0_SCRATCH_BRIDGE;
+        rc = of_file_read_raw(slot_id, slot_offset + done, bridge_addr, chunk);
+        if (rc < 0)
+            return rc;
+
+        if (!direct_cram0) {
+            CRAM0_MODE = CRAM0_MODE_CPU;
+            for (volatile int s = 0; s < 8; s++) {}
+            memcpy(dst + done, (const void *)CRAM0_SCRATCH, chunk);
+        }
+
+        done += chunk;
+        continue;
+
+bounce_via_cram0:
+        CRAM0_MODE = CRAM0_MODE_BRIDGE;
+        for (volatile int s = 0; s < 8; s++) {}
+
+        rc = of_file_read_raw(slot_id, slot_offset + done,
+                              CRAM0_SCRATCH_BRIDGE, chunk);
+        if (rc < 0)
+            return rc;
+
+        CRAM0_MODE = CRAM0_MODE_CPU;
+        for (volatile int s = 0; s < 8; s++) {}
+        memcpy(dst + done, (const void *)CRAM0_SCRATCH, chunk);
+        done += chunk;
+    }
+
+    return 0;
+#endif
+}
+
+/* of_disk_bridge probe — the bridge is "available" if the data slot
+ * command FSM is in READY state. Cheap and side-effect-free. After a
+ * successful probe the dispatcher will route reads through
+ * bridge_read_impl above.
+ *
+ * Note this still returns 1 even if the SD card is wedged — there is
+ * no SD-card-level liveness check from the CPU side. The boot ROM
+ * channel is probed first precisely so that dev workflows can bypass a hung
+ * SD/bridge entirely. */
+static int bridge_probe(void) {
+    return (DS_STATUS & DS_STATUS_READY) ? 1 : 0;
+}
+
+/* Bridge backend size: delegates to the legacy/saturating size wrapper.
+ * Loader inputs are small; POSIX slot FDs use of_file_size64 below. */
+static long bridge_size_impl(uint32_t slot_id) {
+    return of_file_size(slot_id);
+}
+
+const of_disk_driver_t of_disk_bridge = {
+    .name  = "SD",
+    .probe = bridge_probe,
+    .read  = bridge_read_impl,
+    .size  = bridge_size_impl,
+};
+
+/* Public of_file_read — thin wrapper around the disk dispatcher.
+ * Routes to whichever backend was selected at of_disk_init time. */
+int of_file_read(uint32_t slot_id, uint32_t slot_offset,
+                  void *dest, uint32_t length) {
+    return of_disk_read(slot_id, slot_offset, dest, length);
+}
+
+/* Raw bridge DMA: caller owns cache coherency and destination ownership.
+ * Higher-level reads prefer direct SDRAM DMA for aligned cache-line ranges
+ * and use the CRAM0 scratch bounce only where required. */
+int of_file_read_raw(uint32_t slot_id, uint32_t slot_offset,
+                      uint32_t bridge_addr, uint32_t length) {
+#if CHISBURNER_PSRAM127
+    {
+        int rc = async_gate();
+        if (rc)
+            return rc;
+    }
+    return sdram127_transfer(0, slot_id, slot_offset, bridge_addr, length);
+#else
+    uint32_t max_len = bridge_addr_targets_cram0(bridge_addr, length)
+        ? OF_TARGET_CRAM0_DMA_CHUNK_SIZE
+        : DMA_CHUNK_SIZE;
+
+    if (length > max_len)
+        return OF_ERR_BAD_RANGE;
+    {
+        int rc = async_gate();
+        if (rc)
+            return rc;
+    }
+
+    /* Wait for bridge fully idle — READY (ack quiet) AND WR_IDLE (all
+     * write data drained).  ds_issue_command re-verifies with a short
+     * bound; this long blocking wait (with idle hook) is the sync path's
+     * tolerance for OSD ownership / a busy host. */
+    {
+        uint32_t wait = DMA_TIMEOUT;
+        while ((DS_STATUS & (DS_STATUS_READY | DS_STATUS_WR_IDLE))
+               != (DS_STATUS_READY | DS_STATUS_WR_IDLE)) {
+            if (--wait == 0) return OF_ERR_TIMEOUT;
+            if ((wait & 0x3FF) == 0)
+                call_idle_hook();
+        }
+    }
+
+    DS_SLOT_ID     = slot_id;
+    DS_SLOT_OFFSET = slot_offset;
+    DS_BRIDGE_ADDR = bridge_addr;
+    DS_LENGTH      = length;
+
+    {
+        int rc = ds_issue_command(DS_CMD_READ);
+        if (rc)
+            return rc;
+    }
+
+    return file_wait_complete();
+#endif
+}
+
+#if CHISBURNER_PSRAM129_BOOT || CHISBURNER_PSRAM_CACHE129
+int of_file_psram129_read_chunk(uint32_t slot_id, uint32_t slot_offset,
+                               uint32_t bridge_addr, uint32_t length) {
+    uint32_t top = bridge_addr >> 24;
+    if ((top != 0x20u && top != 0x22u) || length == 0u || length > 4096u)
+        return OF_ERR_BAD_RANGE;
+    if ((bridge_addr & 3u) || (length & 3u))
+        return OF_ERR_BAD_RANGE;
+    {
+        int rc = async_gate();
+        if (rc) return rc;
+    }
+    {
+        uint32_t wait = DMA_TIMEOUT;
+        while ((DS_STATUS & (DS_STATUS_READY | DS_STATUS_WR_IDLE)) !=
+               (DS_STATUS_READY | DS_STATUS_WR_IDLE)) {
+            if (--wait == 0u) return OF_ERR_TIMEOUT;
+            if ((wait & 0x3ffu) == 0u) call_idle_hook();
+        }
+    }
+    DS_SLOT_ID = slot_id;
+    DS_SLOT_OFFSET = slot_offset;
+    DS_BRIDGE_ADDR = bridge_addr;
+    DS_LENGTH = length;
+    {
+        int rc = ds_issue_command(DS_CMD_READ);
+        if (rc) return rc;
+    }
+    return file_wait_complete();
+}
+#endif
+
+static int datatable_entry_candidate_for_slot(uint32_t slot_id,
+                                              uint32_t *entry_out) {
+    /* APF's datatable is indexed by array position in data.json, while
+     * DS_CMD_READ/GETFILE use the slot `id` field. Current layout:
+     *   ids 0-7      -> entries 0-7   (game, os, os.ini, app,
+     *                                    data 1-3, soundbank)
+     *   id 8 or id 9 -> entry  8      (one pre-save nonvolatile slot:
+     *                                    SDK Shared Config or Duke settings)
+     *   ids 10-19    -> entries 9-18  (ten nonvolatile save slots)
+     * If you add or remove a pre-save slot in data.json, this map MUST
+     * be updated in lockstep -- the relationship is contractual and
+     * APF does not expose a dependable runtime layout query.
+     * NOTE this is only the FAST-PATH CANDIDATE for reads: cores that
+     * declare BOTH ids 8 and 9 (Diablo) or optional slots that compact
+     * the table make this map wrong, which is why every result is
+     * verified (and writes always use the scan resolver below).  The
+     * dual-window 8+9 layout itself is fully supported -- see
+     * nvslot_map in targets/pocket/save.c. */
+    if (slot_id <= 7) {
+        *entry_out = slot_id;
+        return 0;
+    }
+
+    if (slot_id == 8 || slot_id == 9) {
+        *entry_out = 8;
+        return 0;
+    }
+
+    if (slot_id >= 10 &&
+        slot_id < 10 + (uint32_t)OF_TARGET_SAVE_MAX_SLOTS) {
+        *entry_out = 9 + (slot_id - 10);
+        return 0;
+    }
+
+    return -1;
+}
+
+static int datatable_read_word32(uint32_t word, uint32_t *value_out,
+                                 int *full_reg_out) {
+    /* Toggle-based CDC: writing DT_QUERY flips a toggle bit. The
+     * clk_74a domain detects the change, reads the datatable BRAM,
+     * and tags the result with the captured toggle. DT_QUERY keeps the
+     * legacy {valid, data[30:0]} readback, while DT_QUERY_DATA exposes
+     * the full 32-bit payload so file sizes >= 2GB retain bit 31. */
+    DT_QUERY = word;
+
+    uint32_t val = 0;
+    for (int i = 0; i < 1000; i++) {
+        val = DT_QUERY;
+        if (val & 0x80000000) {
+            if (value_out) {
+                uint32_t legacy = val & 0x7FFFFFFFu;
+                uint32_t full = DT_QUERY_DATA;
+                int has_full = (full != 0 || legacy == 0);
+
+                /* Older bitstreams leave 0x94 as a retired zero register.
+                 * Keep normal app/core loading working there, while newer
+                 * bitstreams use DT_QUERY_DATA to preserve size bit 31. */
+                *value_out = has_full ? full : legacy;
+                if (full_reg_out)
+                    *full_reg_out = has_full;
+            }
+            return 0;
+        }
+    }
+
+    return -1;
+}
+
+/* Raw datatable word readout for boot diagnostics: the entry layout is a
+ * fragile position-indexed contract (see datatable_entry_candidate_for_slot),
+ * and dumping id/size pairs at boot is the only dependable way to verify it
+ * against what the host actually populated. */
+int of_file_datatable_word(uint32_t word, uint32_t *value_out) {
+    return datatable_read_word32(word, value_out, 0);
+}
+
+static int datatable_probe_size_bit31(uint32_t slot_id, uint32_t low_size) {
+    enum { PROBE_LEN = 32 };
+
+    if (low_size == 0 || async_gate())
+        return 0;
+
+    volatile uint8_t *probe =
+#if CHISBURNER_PSRAM127
+        (volatile uint8_t *)(uintptr_t)OF_TARGET_SDRAM_FILE_SCRATCH_ADDR;
+
+    for (uint32_t i = 0; i < PROBE_LEN; i++)
+        probe[i] = (uint8_t)(0x5Au + i * 37u);
+    of_cache_clean_range((void *)(uintptr_t)probe, PROBE_LEN);
+    fence();
+    int rc = of_file_read_raw(slot_id, low_size,
+                              OF_TARGET_SDRAM_FILE_SCRATCH_ADDR, PROBE_LEN);
+    if (rc < 0)
+        return 0;
+#else
+        (volatile uint8_t *)CRAM0_SCRATCH;
+
+    CRAM0_MODE = CRAM0_MODE_CPU;
+    for (volatile int s = 0; s < 8; s++) {}
+    for (uint32_t i = 0; i < PROBE_LEN; i++)
+        probe[i] = (uint8_t)(0x5Au + i * 37u);
+    __asm__ volatile("fence" ::: "memory");
+
+    CRAM0_MODE = CRAM0_MODE_BRIDGE;
+    for (volatile int s = 0; s < 8; s++) {}
+
+    int rc = of_file_read_raw(slot_id, low_size, CRAM0_SCRATCH_BRIDGE,
+                              PROBE_LEN);
+    if (rc < 0)
+        return 0;
+
+    CRAM0_MODE = CRAM0_MODE_CPU;
+    for (volatile int s = 0; s < 8; s++) {}
+#endif
+    for (uint32_t i = 0; i < PROBE_LEN; i++) {
+        if (probe[i] != (uint8_t)(0x5Au + i * 37u))
+            return 1;
+    }
+
+    return 0;
+}
+
+/* Fallback for slot ids the fixed map rejects (e.g. >= 20).  The APF datatable
+ * is positional and target_dataslot_getfile can't return data to the CPU (see
+ * Chip32.md), so we scan the table directly: each entry's word0[15:0] holds
+ * that entry's slot id, so a linear scan recovers an arbitrary id's array
+ * position.  Additive -- existing <=19 layouts still take the hardcoded fast
+ * path above, so this cannot change their behaviour.  Bounded by
+ * DATATABLE_MAX_ENTRIES; the datatable BRAM (mf_datatable.v) holds 512 entries,
+ * but 64 keeps each miss cheap.  A queried id is always one we declared, so its
+ * real (lower) entry is found before any stale post-declaration position. */
+#define DATATABLE_MAX_ENTRIES 64u
+static int datatable_entry_scan_for_slot(uint32_t slot_id, uint32_t *entry_out) {
+    for (uint32_t e = 0; e < DATATABLE_MAX_ENTRIES; e++) {
+        uint32_t w0 = 0;
+        if (datatable_read_word32(e * 2u, &w0, NULL) < 0)
+            return -1;
+        if ((w0 & 0xFFFFu) == slot_id) {
+            *entry_out = e;
+            return 0;
+        }
+    }
+    return -1;
+}
+
+static int datatable_entry_for_slot(uint32_t slot_id, uint32_t *entry_out) {
+    /* The positional candidate map is a fast-path GUESS, not a contract:
+     * on hardware the Pocket populates one entry per DECLARED slot in
+     * declaration order (entry index == id on cores like Diablo that
+     * declare ids 0..22 densely), which shifts every nonvolatile entry
+     * one off the map's legacy "ids 10-19 -> entries 9-18" layout.
+     * Reads through the unverified candidate returned the NEIGHBOURING
+     * file's size (save slot 10 read the ini's size at boot -> archive
+     * unreadable -> heroes vanish after power cycle).  Verify the
+     * candidate's id word and fall back to the scan on mismatch, same
+     * as the commit path. */
+    uint32_t e = 0, w0 = 0;
+    if (datatable_entry_candidate_for_slot(slot_id, &e) == 0 &&
+        datatable_read_word32(e * 2u, &w0, NULL) == 0 &&
+        (w0 & 0xFFFFu) == slot_id) {
+        *entry_out = e;
+        return 0;
+    }
+    return datatable_entry_scan_for_slot(slot_id, entry_out);
+}
+
+/* Scan-only entry resolver for nonvolatile SIZE COMMITS (save.c).
+ * Deliberately SKIPS datatable_entry_candidate_for_slot: the positional
+ * candidate map is exactly the assumption that broke size commits on
+ * compacted layouts (the Pocket populates entries only for slots whose
+ * files actually loaded — Diablo's optional slots shift every save entry),
+ * and a commit through a wrong entry corrupts ANOTHER file's size word.
+ * Reads tolerate the fast path; writes must take the verified scan. */
+int of_file_datatable_entry_for_slot(uint32_t slot_id, uint32_t *entry_out) {
+    return datatable_entry_scan_for_slot(slot_id, entry_out);
+}
+
+long of_file_flags(uint32_t slot_id) {
+    uint32_t entry;
+    if (datatable_entry_for_slot(slot_id, &entry) < 0)
+        return -1;
+
+    uint32_t word = 0;
+    if (datatable_read_word32(entry * 2, &word, NULL) < 0)
+        return -1;
+
+    /* Word 0 is [31:16]=size high bits for >4GB files and [15:0]=id. */
+    return (long)(word & 0xFFFFu);
+}
+
+static int64_t of_file_size64_common(uint32_t slot_id, int allow_probe) {
+    uint32_t entry;
+    if (datatable_entry_for_slot(slot_id, &entry) < 0)
+        return -1;
+
+    uint32_t id_word = 0;
+    uint32_t size_low = 0;
+    int size_has_full_reg = 0;
+    if (datatable_read_word32(entry * 2, &id_word, NULL) < 0)
+        return -1;
+    if (datatable_read_word32(entry * 2 + 1, &size_low,
+                              &size_has_full_reg) < 0)
+        return -1;
+
+    uint64_t size = ((uint64_t)(id_word >> 16) << 32) | size_low;
+    if (allow_probe && !size_has_full_reg &&
+        datatable_probe_size_bit31(slot_id, size_low)) {
+        size += 0x80000000ull;
+    }
+
+    return size ? (int64_t)size : -1;
+}
+
+int64_t of_file_size64(uint32_t slot_id) {
+    return of_file_size64_common(slot_id, 1);
+}
+
+long of_file_size(uint32_t slot_id) {
+    int64_t size = of_file_size64_common(slot_id, 0);
+    if (size <= 0)
+        return -1;
+    if (size > 0x7FFFFFFFll)
+        return 0x7FFFFFFFl;
+    return (long)size;
+}
+
+/*
+ * Get the filename for a data slot via APF target command 0x0190.
+ * The bridge writes a response struct to the DMA buffer containing
+ * the filename. Returns 0 on success, <0 on error.
+ * Filename is written to `name_out` (max `name_max` chars).
+ */
+int of_file_get_name(uint32_t slot_id, char *name_out, uint32_t name_max) {
+    if (!name_out || name_max == 0)
+        return OF_ERR_INVALID_PARAM;
+    {
+        int rc = async_gate();
+        if (rc)
+            return rc;
+    }
+
+#if CHISBURNER_PSRAM127
+    uint32_t response_addr = OF_TARGET_SDRAM_FILE_SCRATCH_ADDR;
+    uint32_t *resp32 = (uint32_t *)(uintptr_t)response_addr;
+    memset(resp32, 0, 256u);
+    of_cache_clean_range(resp32, 256u);
+    fence();
+
+    /* Preserve the APF primer behavior, but land it in SDRAM. */
+    (void)of_file_read_raw(slot_id, 0, response_addr, 4u);
+    memset(resp32, 0, 256u);
+    of_cache_flush_range(resp32, 256u);
+    fence();
+
+    int rc = sdram127_inbound_command(DS_CMD_GETFILE, slot_id, response_addr);
+    if (rc)
+        return rc;
+    of_cache_inval_range(resp32, 256u);
+    fence();
+
+    const char *filename = (const char *)(uintptr_t)response_addr;
+    const char *base = filename;
+    for (const char *p = filename; *p; p++) {
+        if (*p == '/') base = p + 1;
+    }
+    uint32_t i;
+    for (i = 0; i < name_max - 1u && base[i]; i++)
+        name_out[i] = base[i];
+    name_out[i] = '\0';
+    return i ? 0 : -1;
+#else
+    /* v2 arch: response buffer lands in CRAM0 scratch (uncached per
+     * PMA, so no D-cache dance is needed).  Use a dedicated GETFILE
+     * offset so it can't collide with an in-flight bridge DMA that
+     * targets the lower part of CRAM0_SCRATCH. */
+    #define GETFILE_ADDR      CRAM0_SCRATCH
+    #define GETFILE_BRIDGE    CRAM0_SCRATCH_BRIDGE
+    uint32_t bridge_addr = GETFILE_BRIDGE;
+    volatile uint32_t *resp32 = (volatile uint32_t *)GETFILE_ADDR;
+
+    /* CPU-side scribble on CRAM0 — take ownership of the mux first. */
+    CRAM0_MODE = CRAM0_MODE_CPU;
+    for (volatile int s = 0; s < 8; s++) {}
+    for (int i = 0; i < 64; i++)
+        resp32[i] = 0;
+    __asm__ volatile("fence" ::: "memory");
+
+    /* Hand the mux back to the bridge for the primer + GETFILE DMAs. */
+    CRAM0_MODE = CRAM0_MODE_BRIDGE;
+    for (volatile int s = 0; s < 8; s++) {}
+
+    /* Prime APF's internal slot state with a throw-away 4-byte read.
+     * Empirically, APF only returns a valid filename from GETFILE after
+     * the slot has been touched by DS_CMD_READ via the bridge. Slots
+     * loaded exclusively through the boot-ROM path (e.g. the OS binary
+     * via the bootloader) or slots never yet accessed return an empty
+     * response struct. The primer read is 4 bytes at offset 0; the data
+     * is discarded. rc is ignored — if the read fails, GETFILE will
+     * also fail cleanly below. */
+    (void)of_file_read_raw(slot_id, 0, bridge_addr, 4);
+
+    /* Re-clear the response buffer — the primer read landed its 4 bytes
+     * there, and we want GETFILE to start from known zeros. */
+    CRAM0_MODE = CRAM0_MODE_CPU;
+    for (volatile int s = 0; s < 8; s++) {}
+    for (int i = 0; i < 64; i++)
+        resp32[i] = 0;
+    __asm__ volatile("fence" ::: "memory");
+    CRAM0_MODE = CRAM0_MODE_BRIDGE;
+    for (volatile int s = 0; s < 8; s++) {}
+
+    DS_SLOT_ID     = slot_id;
+    DS_RESP_ADDR   = bridge_addr;
+    {
+        int rc = ds_issue_command(DS_CMD_GETFILE);
+        if (rc)
+            return rc;
+    }
+
+    /* Wait for command completion and all bridge writes to drain.
+     * The APF host fetches the filename from SD and writes the response
+     * struct back to the bridge address — WR_IDLE ensures the data
+     * has landed in memory before we read it. */
+    {
+        uint32_t wait = 5000000;  /* ~50ms */
+        while (!(DS_STATUS & DS_STATUS_DONE)) {
+            if (--wait == 0) return OF_ERR_TIMEOUT;
+        }
+        wait = 5000000;
+        while (!(DS_STATUS & DS_STATUS_READY)) {
+            if (--wait == 0) return OF_ERR_TIMEOUT;
+        }
+        wait = 5000000;
+        while (!(DS_STATUS & DS_STATUS_WR_IDLE)) {
+            if (--wait == 0) return OF_ERR_TIMEOUT;
+        }
+    }
+
+    DS_STATUS = DS_STATUS_IRQ_PENDING;
+    uint32_t err = (DS_STATUS & DS_STATUS_ERR_MASK) >> DS_STATUS_ERR_SHIFT;
+    if (err)
+        return -((int)err);
+
+    /* CRAM0 is uncached per PMA — no D-cache invalidation needed.
+     * Flip the mux back to the CPU so reads below go through our CDC. */
+    CRAM0_MODE = CRAM0_MODE_CPU;
+    for (volatile int s = 0; s < 8; s++) {}
+    const char *filename = (const char *)GETFILE_ADDR;
+
+    /* Extract basename (after last '/') */
+    const char *base = filename;
+    for (const char *p = filename; *p; p++) {
+        if (*p == '/') base = p + 1;
+    }
+
+    uint32_t i;
+    for (i = 0; i < name_max - 1 && base[i]; i++)
+        name_out[i] = base[i];
+    name_out[i] = '\0';
+
+    return (i > 0) ? 0 : -1;
+#endif
+}
+
+int of_file_slot_write(uint32_t slot_id, uint32_t bridge_addr, uint32_t length) {
+    return of_file_slot_write_at(slot_id, 0, bridge_addr, length);
+}
+
+int of_file_slot_write_at(uint32_t slot_id, uint32_t slot_offset,
+                           uint32_t bridge_addr, uint32_t length) {
+    {
+        int rc = async_gate();
+        if (rc)
+            return rc;
+    }
+
+#if CHISBURNER_PSRAM127
+    if (length == 0)
+        return 0;
+    return sdram127_transfer(1, slot_id, slot_offset, bridge_addr, length);
+#else
+    /* Wait for bridge idle before issuing command */
+    {
+        uint32_t wait = DMA_TIMEOUT;
+        while ((DS_STATUS & (DS_STATUS_READY | DS_STATUS_WR_IDLE))
+               != (DS_STATUS_READY | DS_STATUS_WR_IDLE)) {
+            if (--wait == 0) return OF_ERR_TIMEOUT;
+        }
+    }
+
+    DS_SLOT_ID     = slot_id;
+    DS_SLOT_OFFSET = slot_offset;
+    DS_BRIDGE_ADDR = bridge_addr;
+    DS_LENGTH      = length;
+
+    {
+        int rc = ds_issue_command(DS_CMD_WRITE);
+        if (rc)
+            return rc;
+    }
+
+    return file_wait_complete();
+#endif
+}
+
+int of_file_slot_write_chunked(uint32_t slot_id, uint32_t slot_offset,
+                                uint32_t bridge_addr, uint32_t total,
+                                uint32_t chunk_size) {
+    if (total == 0)
+        return of_file_slot_write_at(slot_id, slot_offset, bridge_addr, 0);
+
+    if (chunk_size == 0 || chunk_size > total)
+        chunk_size = total;
+
+    uint32_t done = 0;
+    while (done < total) {
+        uint32_t chunk = total - done;
+        if (chunk > chunk_size)
+            chunk = chunk_size;
+
+        int rc = of_file_slot_write_at(slot_id, slot_offset + done,
+                                        bridge_addr + done, chunk);
+        if (rc < 0)
+            return rc;
+
+        done += chunk;
+    }
+
+    return 0;
+}
+
+/* Dynamic output support.  Keep one fixed scratch window and one open stream;
+ * the app-facing service layer restricts which slot and path are reachable. */
+static uint32_t output_open_slot;
+static uint32_t output_open_size;
+static int output_is_open;
+
+/* The APF 0x0192 structure is fetched as 32-bit BRIDGE words.  CRAM0 is
+ * exposed through the generic byte-stream bridge window, whose serializer
+ * already reverses a little-endian CPU word.  Store numeric structure fields
+ * most-significant byte first so the word observed by APF is the documented
+ * numeric value (for example flags 3 is 0x00000003, not 0x03000000).
+ * The path remains a byte string and is copied unchanged. */
+static void output_param_put_word(uint8_t *dst, uint32_t value) {
+    dst[0] = (uint8_t)(value >> 24);
+    dst[1] = (uint8_t)(value >> 16);
+    dst[2] = (uint8_t)(value >> 8);
+    dst[3] = (uint8_t)value;
+}
+
+#if CART_GB_RESTORE180
+/* Only names emitted by the GB pre-restore backup route may be reused.
+ * Keep this separate from GBA policy, and forbid subpaths/traversal. */
+static int gb180_backup_reusable(const char *path, uint32_t len, uint32_t size) {
+    static const char prefix[] = "/Saves/chiskit/common/GB-";
+    const uint32_t first = sizeof(prefix) - 1u;
+    uint32_t suffix = 11u;
+#if CART_GB_RTC189
+    if (size == 48u) {
+        suffix = 15u;
+        if (len <= first + suffix || strcmp(path + len - suffix, "-rtc-backup.bin")) return 0;
+    } else
+#endif
+    if (
+#if CART_GB_RESTORE185
+        size != 256u &&
+#endif
+        size != 512u && size != 8192u && size != 32768u && size != 65536u && size != 131072u)
+        return 0;
+    if (len <= first + suffix || strncmp(path, prefix, first) ||
+        (suffix == 11u && strcmp(path + len - suffix, "-backup.sav"))) return 0;
+    for (uint32_t i = first; i < len - suffix; i++) {
+        unsigned char c = (unsigned char)path[i];
+        if (!((c >= 'A' && c <= 'Z') || (c >= 'a' && c <= 'z') ||
+              (c >= '0' && c <= '9') || c == '_' || c == '-')) return 0;
+    }
+    return 1;
+}
+#endif
+int of_file_output_open(uint32_t slot_id, const char *path, uint32_t size) {
+    if (!path)
+        return OF_ERR_INVALID_PARAM;
+
+    uint32_t path_len = 0;
+    while (path[path_len] && path_len < 256u)
+        path_len++;
+    if (path_len == 0 || path_len >= 256u)
+        return OF_ERR_BAD_RANGE;
+
+    {
+        int rc = async_gate();
+        if (rc)
+            return rc;
+    }
+
+#if CHISBURNER_PSRAM127
+    uint32_t param_addr = OF_TARGET_SDRAM_FILE_SCRATCH_ADDR;
+    uint8_t *param = (uint8_t *)(uintptr_t)param_addr;
+    output_is_open = 0;
+
+#if CART_UI98
+    memset(param, 0, 264u);
+    memcpy(param, path, path_len);
+    int rc = sdram127_outbound_command(DS_CMD_OPENFILE, slot_id,
+                                       param_addr, 264u,
+                                       (1u << 0) | (1u << 3));
+    if (rc) return rc;
+    uint32_t open_result = (DS_STATUS & DS_STATUS_ERR_MASK) >> DS_STATUS_ERR_SHIFT;
+#if CART_SAVE158 || CART_GB_RESTORE180
+    /* Only the explicitly named rotating pre-restore backup is replaceable.
+     * OPEN with flags zero does not truncate it. Reject a different size;
+     * the app compares before updating, then verifies the entire file. */
+    int reusable_backup = 0;
+    /* Dedicated app preference file, never an APF nonvolatile save slot. */
+    int reusable_language = size == 16u &&
+        !strcmp(path, "/Saves/chiskit/common/chiskit-language.cfg");
+#if CART_SAVE158
+    reusable_backup =
+        (size == 512u || size == 8192u || size == 32768u || size == 131072u) &&
+        path_len > 11u && !strcmp(path + path_len - 11u, "-backup.sav") &&
+        !strncmp(path, "/Saves/chiskit/common/GBA-", sizeof("/Saves/chiskit/common/GBA-")-1u);
+#endif
+#if CART_GB_RESTORE180
+    reusable_backup |= gb180_backup_reusable(path, path_len, size);
+#endif
+    if (open_result == 0u && slot_id == 5u && (reusable_backup || reusable_language)) {
+        if (of_file_size(slot_id) != (long)size) return OF_ERR_BAD_RANGE;
+        output_open_slot = slot_id;
+        output_open_size = size;
+        output_is_open = 1;
+        return 1; /* Existing backup: compare/reuse before any file write. */
+    }
+#endif
+    if (open_result != 3u)
+        return OF_ERR_DENIED;
+#endif
+
+    memset(param, 0, 264u);
+    memcpy(param, path, path_len);
+    output_param_put_word(param + 256u, 3u);
+    output_param_put_word(param + 260u, size);
+    int rc_create = sdram127_outbound_command(
+        DS_CMD_OPENFILE, slot_id, param_addr, 264u,
+#if CART_UI98
+        (1u << 1)
+#else
+        (1u << 0) | (1u << 1)
+#endif
+    );
+    if (rc_create) return rc_create;
+#if CART_UI98
+    if (((DS_STATUS & DS_STATUS_ERR_MASK) >> DS_STATUS_ERR_SHIFT) != 1u)
+        return OF_ERR_DENIED;
+#endif
+
+    {
+        uint32_t entry;
+        if (of_file_datatable_entry_for_slot(slot_id, &entry) < 0)
+            return OF_ERR_INVALID_STATE;
+        SAVE_DT_WORD = entry * 2u + 1u;
+        SAVE_DT_SIZE = size;
+        fence();
+    }
+    output_open_slot = slot_id;
+    output_open_size = size;
+    output_is_open = 1;
+    return 0;
+#else
+#if CART_UI98
+    /* Preserve previous backups: probe first, refuse every existing name.
+     * This reuses the smoke.64 APF OPEN result contract (0 exists, 3 absent,
+     * 1 newly created). Only the create branch writes a new file. */
+    output_is_open = 0;
+    {
+        uint8_t *check = (uint8_t *)(uintptr_t)CRAM0_SCRATCH;
+        CRAM0_MODE = CRAM0_MODE_CPU;
+        for (volatile int s = 0; s < 8; s++) {}
+        __builtin_memset(check, 0, 264u);
+        __builtin_memcpy(check, path, path_len);
+        __asm__ volatile("fence" ::: "memory");
+        CRAM0_MODE = CRAM0_MODE_BRIDGE;
+        for (volatile int s = 0; s < 8; s++) {}
+        DS_SLOT_ID = slot_id;
+        DS_PARAM_ADDR = CRAM0_SCRATCH_BRIDGE;
+        int rc = ds_issue_command(DS_CMD_OPENFILE);
+        if (rc) return rc;
+        rc = file_wait_complete_mask((1u << 0) | (1u << 3));
+        if (rc) return rc;
+        if (((DS_STATUS & DS_STATUS_ERR_MASK) >> DS_STATUS_ERR_SHIFT) != 3u)
+            return OF_ERR_DENIED;
+    }
+#endif
+    uint8_t *param = (uint8_t *)(uintptr_t)CRAM0_SCRATCH;
+    CRAM0_MODE = CRAM0_MODE_CPU;
+    for (volatile int s = 0; s < 8; s++) {}
+
+    __builtin_memset(param, 0, 264u);
+    __builtin_memcpy(param, path, path_len);
+    output_param_put_word(param + 256u, 3u); /* create + resize/truncate */
+    output_param_put_word(param + 260u, size);
+    __asm__ volatile("fence" ::: "memory");
+
+    CRAM0_MODE = CRAM0_MODE_BRIDGE;
+    for (volatile int s = 0; s < 8; s++) {}
+
+    {
+        uint32_t wait = DMA_TIMEOUT;
+        while ((DS_STATUS & (DS_STATUS_READY | DS_STATUS_WR_IDLE)) !=
+               (DS_STATUS_READY | DS_STATUS_WR_IDLE)) {
+            if (--wait == 0) {
+                of_term_printf("[output flush PREWAIT timeout st=%02x]\n",
+                               (unsigned)(DS_STATUS & 0x7F));
+                return OF_ERR_TIMEOUT;
+            }
+        }
+    }
+
+    DS_SLOT_ID   = slot_id;
+    DS_PARAM_ADDR = CRAM0_SCRATCH_BRIDGE;
+    {
+        int rc = ds_issue_command(DS_CMD_OPENFILE);
+        if (rc)
+            return rc;
+        rc = file_wait_complete_mask(
+#if CART_UI98
+            (1u << 1)
+#else
+            (1u << 0) | (1u << 1)
+#endif
+          );
+          if (rc)
+              return rc;
+#if CART_UI98
+          /* The legacy wait helper maps unexpected host result zero to zero.
+           * Explicitly require CREATED before authorizing output writes. */
+          if (((DS_STATUS & DS_STATUS_ERR_MASK) >> DS_STATUS_ERR_SHIFT) != 1u)
+              return OF_ERR_DENIED;
+#endif
+      }
+
+    /* OPEN creates the deferred slot's datatable entry. Publish the requested
+     * size before FLUSH asks the Pocket host to commit the output file. */
+    {
+        uint32_t entry;
+        if (of_file_datatable_entry_for_slot(slot_id, &entry) < 0)
+            return OF_ERR_INVALID_STATE;
+        SAVE_DT_WORD = entry * 2u + 1u;
+        SAVE_DT_SIZE = size;
+        fence();
+    }
+
+    output_open_slot = slot_id;
+    output_open_size = size;
+    output_is_open = 1;
+    return 0;
+#endif
+}
+
+int of_file_output_write(uint32_t slot_id, uint32_t slot_offset,
+                         const void *src, uint32_t length) {
+    if (!output_is_open || slot_id != output_open_slot)
+        return OF_ERR_INVALID_STATE;
+    if ((!src && length) || slot_offset > output_open_size ||
+        length > output_open_size - slot_offset)
+        return OF_ERR_BAD_RANGE;
+
+    const uint8_t *input = (const uint8_t *)src;
+    uint32_t done = 0;
+    while (done < length) {
+        uint32_t chunk = length - done;
+        /* Pocket target writes are accepted in the normal 32 KiB DMA
+         * window.  CRAM0 has a 64 KiB CPU bounce area, but forwarding that
+         * whole area as one target write returns APF result 2 on hardware. */
+        if (chunk > DMA_CHUNK_SIZE)
+            chunk = DMA_CHUNK_SIZE;
+
+#if CHISBURNER_PSRAM127
+        uint32_t scratch = OF_TARGET_SDRAM_FILE_SCRATCH_ADDR;
+        memcpy((void *)(uintptr_t)scratch, input + done, chunk);
+        int rc = of_file_slot_write_at(slot_id, slot_offset + done,
+                                       scratch, chunk);
+#else
+        CRAM0_MODE = CRAM0_MODE_CPU;
+        for (volatile int s = 0; s < 8; s++) {}
+        __builtin_memcpy((void *)(uintptr_t)CRAM0_SCRATCH,
+                         input + done, chunk);
+        __asm__ volatile("fence" ::: "memory");
+
+        CRAM0_MODE = CRAM0_MODE_BRIDGE;
+        for (volatile int s = 0; s < 8; s++) {}
+
+        int rc = of_file_slot_write_at(slot_id, slot_offset + done,
+                                       CRAM0_SCRATCH_BRIDGE, chunk);
+#endif
+        if (rc)
+            return rc;
+        done += chunk;
+    }
+
+    return 0;
+}
+
+int of_file_output_flush(uint32_t slot_id) {
+    if (!output_is_open || slot_id != output_open_slot)
+        return OF_ERR_INVALID_STATE;
+    {
+        int rc = async_gate();
+        if (rc)
+            return rc;
+    }
+    {
+        uint32_t wait = DMA_TIMEOUT;
+        while ((DS_STATUS & (DS_STATUS_READY | DS_STATUS_WR_IDLE)) !=
+               (DS_STATUS_READY | DS_STATUS_WR_IDLE)) {
+            if (--wait == 0)
+                return OF_ERR_TIMEOUT;
+        }
+    }
+
+    DS_SLOT_ID = slot_id;
+    {
+        int rc = ds_issue_command(DS_CMD_FLUSH);
+        if (rc)
+            return rc;
+        rc = file_wait_complete();
+        if (rc)
+            return rc;
+    }
+
+    output_is_open = 0;
+    return 0;
+}
+
+/* (moved to top of file read section) */
+
+#if CHISBURNER_SDRAM122
+#if !CART_UI98
+#error SDRAM122 requires CART_UI98 create-only output protection
+#endif
+#include "file_sdram122.inc"
+#endif
+
+int of_file_read_chunked(uint32_t slot_id, uint32_t slot_offset,
+                          void *dest, uint32_t total) {
+    uint32_t done = 0;
+
+    while (done < total) {
+        uint32_t chunk = total - done;
+        if (chunk > DMA_CHUNK_SIZE)
+            chunk = DMA_CHUNK_SIZE;
+
+        /* of_file_read handles SDRAM direct DMA and CRAM0 bounce fallback. */
+        int rc = of_file_read(slot_id, slot_offset + done,
+                               (void *)((uintptr_t)dest + done), chunk);
+        if (rc < 0)
+            return rc;
+
+        done += chunk;
+    }
+
+    return 0;
+}
+
+/* ======================================================================
+ * Async file read — non-blocking DMA with callback
+ * ====================================================================== */
+
+static uint32_t align_up_u32(uint32_t value, uint32_t align) {
+    return (value + align - 1u) & ~(align - 1u);
+}
+
+void *of_file_dma_stage_alloc(uint32_t size, uint32_t align) {
+    if (size == 0)
+        return (void *)0;
+
+    if (align < 4u)
+        align = 4u;
+    if ((align & (align - 1u)) != 0)
+        return (void *)0;
+
+    uint32_t off = align_up_u32(dma_stage_next, align);
+    if (off > OF_TARGET_CRAM0_APP_DMA_SIZE ||
+        size > OF_TARGET_CRAM0_APP_DMA_SIZE - off)
+        return (void *)0;
+
+    dma_stage_next = off + size;
+#if CHISBURNER_PSRAM127
+    return (void *)(uintptr_t)(OF_TARGET_SDRAM_APP_DMA_ADDR + off);
+#else
+    return (void *)(uintptr_t)(CRAM0_BASE + OF_TARGET_CRAM0_APP_DMA_OFFSET + off);
+#endif
+}
+
+int of_file_dma_stage_reset(void) {
+    {
+        int rc = async_gate();
+        if (rc)
+            return rc;
+    }
+    dma_stage_next = 0;
+    return 0;
+}
+
+uint32_t of_file_async_max_read(void) {
+    return OF_TARGET_CRAM0_DMA_CHUNK_SIZE;
+}
+
+uint32_t of_file_dma_stage_size(void) {
+    return OF_TARGET_CRAM0_APP_DMA_SIZE;
+}
+
+#if !CHISBURNER_PSRAM127
+static int async_dest_in_cram0(void *dest, uint32_t length) {
+    uint32_t addr = (uintptr_t)dest;
+    return addr >= CRAM0_BASE &&
+           length <= CRAM_SIZE &&
+           addr <= (CRAM0_BASE + CRAM_SIZE - length);
+}
+#endif
+
+/* App-facing completion: clears the in-flight state and fires the callback.
+ * Runs at DMA-done for CRAM0-direct destinations, or after the deferred
+ * bounce copy finishes for SDRAM destinations. */
+static void async_finalize(int result) {
+    int token = async_state.token;
+    void (*cb)(int, int) = async_state.callback;
+
+    async_state.active = 0;
+    async_state.dest = (void *)0;
+    async_state.dma_dest = (void *)0;
+    async_state.bounce_to_dest = 0;
+    async_state.length = 0;
+    async_state.callback = (void *)0;
+    async_state.copy_pending = 0;
+    async_state.copy_off = 0;
+    async_state.age_ms = 0;
+    async_state.completed_count++;
+
+    if (cb)
+        cb(token, result);
+}
+
+/* DMA-done: latch the result and hand CRAM0 back to the CPU.  The bridge DMA
+ * target is always CRAM0 (app staging buffer or OS bounce window) — uncached
+ * per PMA, so no cache maintenance.  For a non-CRAM0 destination the chunk
+ * still has to be copied out of the bounce window; that copy is DEFERRED:
+ * running a whole-chunk memcpy inside the data-slot IRQ produced ~ms IRQ
+ * blackouts that froze the mixer pump ISR, input, and the frame loop (the
+ * residual music stutter with async otherwise working).  The 1 kHz kernel
+ * tick advances it in bounded slices; of_file_async_poll() or the next file
+ * op drains it fully.  The app callback fires only after the copy. */
+static void async_complete(uint32_t status) {
+    uint32_t err = (status & DS_STATUS_ERR_MASK) >> DS_STATUS_ERR_SHIFT;
+    int result = err ? -((int)err) : 0;
+
+#if CHISBURNER_PSRAM127
+    sdram127_audit_cram_traffic();
+    /* Completion means the host is quiet. Reacquire ownership before the CPU
+     * observes SDRAM, invalidate the ingress window, then reopen admission. */
+    int lock_rc = cb_sd122_lock(&sdram127_mmio, 1, SDRAM127_LOCK_POLLS);
+    if (lock_rc == 0) {
+        if (result == 0) {
+            of_cache_inval_range(async_state.dma_dest, async_state.length);
+            fence();
+        }
+        lock_rc = cb_sd122_lock(&sdram127_mmio, 0, SDRAM127_LOCK_POLLS);
+    }
+    if (lock_rc)
+        result = sdram127_map_error(lock_rc);
+#else
+    CRAM0_MODE = CRAM0_MODE_CPU;
+    for (volatile int s = 0; s < 8; s++) {}
+#endif
+
+    IRQ_MASK &= ~IRQ_MASK_DATASLOT;
+    async_state.age_ms = 0;
+
+    /* Defer the bounce copy ONLY when the 1 kHz machine timer is armed —
+     * the tick is what pumps a deferred copy, and the mixer/input ISRs the
+     * deferral protects only run off that same timer.  Timer off means
+     * nothing would ever advance the copy (a waiter spinning on its
+     * callback flag would hang) and nothing is starved by doing it inline,
+     * so inline is both safe and required there. */
+    if (result == 0 && async_state.bounce_to_dest) {
+        if (TIMER_CTRL & TIMER_CTRL_ENABLE) {
+            async_state.copy_off = 0;
+            async_state.copy_result = result;
+            async_state.copy_pending = 1;
+            return;             /* active stays set until the copy delivers */
+        }
+        memcpy(async_state.dest, async_state.dma_dest, async_state.length);
+    }
+
+    async_finalize(result);
+}
+
+/* Advance the deferred bounce copy by at most max_bytes (0 = no cap, i.e.
+ * finish it).  IRQ-protected: the 1 kHz tick (timer IRQ) and app-context
+ * drains both land here.  Finishing the copy fires the app callback. */
+static void async_copy_slice(uint32_t max_bytes) {
+    uint32_t irq = file_irq_save();
+    if (!async_state.copy_pending) {
+        file_irq_restore(irq);
+        return;
+    }
+
+    uint32_t off = async_state.copy_off;
+    uint32_t n = async_state.length - off;
+    if (max_bytes && n > max_bytes)
+        n = max_bytes;
+
+    memcpy((uint8_t *)async_state.dest + off,
+           (const uint8_t *)async_state.dma_dest + off, n);
+    off += n;
+    async_state.copy_off = off;
+
+    if (off == async_state.length) {
+        async_state.copy_pending = 0;
+        async_finalize(async_state.copy_result);
+    }
+    file_irq_restore(irq);
+}
+
+static void async_copy_drain(void) {
+    async_copy_slice(0);
+}
+
+int of_file_read_async(uint32_t slot_id, uint32_t slot_offset,
+                       void *dest, uint32_t length,
+                       void (*callback)(int token, int result)) {
+    /* A pending bounce copy doesn't own the bridge — deliver the previous
+     * completion inline so back-to-back streaming can't wedge on it. */
+    if (async_state.copy_pending)
+        async_copy_drain();
+    if (async_state.active)
+        return OF_ERR_BUSY;
+#if CHISBURNER_PSRAM127
+    if (length > DMA_CHUNK_SIZE)
+#else
+    if (length > OF_TARGET_CRAM0_DMA_CHUNK_SIZE)
+#endif
+        return OF_ERR_BAD_RANGE;
+#if CHISBURNER_PSRAM127
+    int direct_cram0 = 0;
+    void *dma_dest = (void *)(uintptr_t)OF_TARGET_SDRAM_ASYNC_BOUNCE_ADDR;
+#else
+    int direct_cram0 = async_dest_in_cram0(dest, length);
+    void *dma_dest = direct_cram0
+        ? dest
+        : (void *)(uintptr_t)(CRAM0_BASE + OF_TARGET_CRAM0_ASYNC_BOUNCE_OFFSET);
+#endif
+    if (!bridge_warmup_active)
+        bridge_warmup_once();
+
+    /* Fail fast (defer) when the bridge isn't idle — the fire-and-return
+     * contract can't block here, and the app re-issues on its next poll.
+     * Single read, no wait: legacy async behavior. */
+    uint32_t st = DS_STATUS;
+    if ((st & (DS_STATUS_READY | DS_STATUS_WR_IDLE))
+        != (DS_STATUS_READY | DS_STATUS_WR_IDLE))
+        return OF_ERR_BUSY;
+
+    uint32_t bridge_addr =
+#if CHISBURNER_PSRAM127
+        (uint32_t)(uintptr_t)dma_dest;
+
+    of_cache_inval_range(dma_dest, length);
+    fence();
+    int lock_rc = cb_sd122_lock(&sdram127_mmio, 1, SDRAM127_LOCK_POLLS);
+    if (lock_rc)
+        return sdram127_map_error(lock_rc);
+    lock_rc = cb_sd122_lock(&sdram127_mmio, 0, SDRAM127_LOCK_POLLS);
+    if (lock_rc)
+        return sdram127_map_error(lock_rc);
+#else
+        cpu_to_bridge(dma_dest);
+
+    /* The async hardware path only writes CRAM0.  Do not issue CBO operations
+     * for the DMA target: CRAM0 is uncached, and SDRAM destinations are filled
+     * later by CPU memcpy from the internal CRAM0 bounce buffer. */
+    CRAM0_MODE = CRAM0_MODE_BRIDGE;
+    for (volatile int s = 0; s < 8; s++) {}
+#endif
+
+    /* Record pending state before firing the command.  IRQ delivery is masked
+     * while the syscall is in progress, but the bridge can still complete very
+     * quickly once the command reaches the APF host. */
+    int token = async_token_counter++;
+    async_state.active   = 1;
+    async_state.completed_count = 0;
+    async_state.token    = token;
+    async_state.length   = length;
+    async_state.dest     = dest;
+    async_state.dma_dest = dma_dest;
+    async_state.bounce_to_dest = !direct_cram0;
+    async_state.callback = callback;
+    async_state.copy_pending = 0;
+    async_state.copy_off = 0;
+    async_state.age_ms = 0;
+
+    DS_STATUS = DS_STATUS_IRQ_PENDING;
+    IRQ_MASK |= IRQ_MASK_DATASLOT;
+
+    DS_SLOT_ID     = slot_id;
+    DS_SLOT_OFFSET = slot_offset;
+    DS_BRIDGE_ADDR = bridge_addr;
+    DS_LENGTH      = length;
+
+    /* ds_issue_command bounds the ack-quiet pre-wait in TIME (~µs-scale in
+     * practice) and verifies acceptance via the status-latch reset, so the
+     * call stays effectively fire-and-return and never false-negatives on
+     * an accepted command (the old unwind-with-DMA-in-flight bug).  A
+     * nonzero rc here means the command was genuinely never dispatched, so
+     * the unwind below cannot orphan an in-flight transfer. */
+    int rc = ds_issue_command(DS_CMD_READ);
+    if (rc == 0)
+        return token;
+
+    async_state.active = 0;
+    async_state.callback = (void *)0;
+    IRQ_MASK &= ~IRQ_MASK_DATASLOT;
+#if CHISBURNER_PSRAM127
+    /* The command was not accepted; restore normal host admission. */
+    (void)cb_sd122_lock(&sdram127_mmio, 1, SDRAM127_LOCK_POLLS);
+    (void)cb_sd122_lock(&sdram127_mmio, 0, SDRAM127_LOCK_POLLS);
+#else
+    CRAM0_MODE = CRAM0_MODE_CPU;
+    for (volatile int s = 0; s < 8; s++) {}
+#endif
+    return rc;
+}
+
+void of_file_async_irq_service(void) {
+    uint32_t st = DS_STATUS;
+    if (!(st & DS_STATUS_IRQ_PENDING))
+        return;
+
+    DS_STATUS = DS_STATUS_IRQ_PENDING;
+
+    if (!async_state.active || async_state.copy_pending) {
+        /* No transfer we know of (e.g. a previously aged-out command
+         * finally completing) — clear and move on. */
+        IRQ_MASK &= ~IRQ_MASK_DATASLOT;
+        return;
+    }
+
+    async_complete(st);
+}
+
+int of_file_async_poll(void) {
+    if (async_state.copy_pending)
+        async_copy_drain();
+
+    if (async_state.completed_count) {
+        async_state.completed_count--;
+        return 1;
+    }
+
+    if (async_state.active) {
+        /* IRQ-protected: the 1 kHz tick and the data-slot IRQ run the same
+         * completion — without the guard a tick landing between our status
+         * read and W1C write would double-complete. */
+        uint32_t irq = file_irq_save();
+        uint32_t st = DS_STATUS;
+        if (st & DS_STATUS_IRQ_PENDING) {
+            DS_STATUS = DS_STATUS_IRQ_PENDING;
+            if (async_state.active && !async_state.copy_pending)
+                async_complete(st);
+            else
+                IRQ_MASK &= ~IRQ_MASK_DATASLOT;
+        } else if ((st & DS_STATUS_DONE) &&
+                   ((st & (DS_STATUS_READY | DS_STATUS_WR_IDLE))
+                    == (DS_STATUS_READY | DS_STATUS_WR_IDLE))) {
+            DS_STATUS = DS_STATUS_IRQ_PENDING;
+            async_complete(st);
+        }
+        file_irq_restore(irq);
+
+        if (async_state.copy_pending)
+            async_copy_drain();
+
+        if (async_state.completed_count) {
+            async_state.completed_count--;
+            return 1;
+        }
+    }
+
+    return 0;
+}
+
+/* 1 kHz kernel tick (timer_isr_callback -> here).  Three jobs:
+ *  (a) Copy pump: advance a deferred bounce copy in bounded slices
+ *      (~<=100 µs per tick at IRQ priority) so SDRAM-destination
+ *      completions never run a whole-chunk memcpy in IRQ context.
+ *  (b) Lost-IRQ completion: complete a DONE-latched transfer whose
+ *      data-slot IRQ never delivered (observed on device across Pocket
+ *      OSD visits — async_state.active wedged forever and every later
+ *      bridge op failed OF_ERR_BUSY).  Kernel-driven so recovery does
+ *      not depend on the app calling of_file_async_poll().
+ *  (c) Age-out: a transfer with no DONE after ASYNC_AGE_LIMIT_MS is
+ *      failed to the app (OF_ERR_TIMEOUT).  The APF host cannot be
+ *      canceled — if the zombie completes later its IRQ lands in the
+ *      !active branch of the IRQ service and is cleared harmlessly.
+ *      Recovery-only: today that state wedges the async API forever. */
+#define ASYNC_COPY_SLICE_BYTES 2048u
+#define ASYNC_AGE_LIMIT_MS     2000u   /* < the CD ring depth (5 s), so a
+                                        * reclaimed dead transfer refills
+                                        * before the stream laps; a live one
+                                        * completing later is absorbed by the
+                                        * aged-out guard in the IRQ path. */
+
+void of_file_async_tick(void) {
+    if (async_state.copy_pending) {
+        async_copy_slice(ASYNC_COPY_SLICE_BYTES);
+        return;
+    }
+    if (!async_state.active)
+        return;
+
+    uint32_t st = DS_STATUS;
+    if (st & DS_STATUS_IRQ_PENDING) {
+        of_file_async_irq_service();
+        return;
+    }
+    if ((st & DS_STATUS_DONE) &&
+        ((st & (DS_STATUS_READY | DS_STATUS_WR_IDLE))
+         == (DS_STATUS_READY | DS_STATUS_WR_IDLE))) {
+        DS_STATUS = DS_STATUS_IRQ_PENDING;
+        async_complete(st);
+        return;
+    }
+
+    if (++async_state.age_ms >= ASYNC_AGE_LIMIT_MS) {
+        of_term_printf("[async %us %02x]\n",
+                       (unsigned)(ASYNC_AGE_LIMIT_MS / 1000u),
+                       (unsigned)(st & 0xFF));
+        IRQ_MASK &= ~IRQ_MASK_DATASLOT;
+        async_finalize(OF_ERR_TIMEOUT);
+    }
+}
+
+int of_file_async_busy(void) {
+    return async_state.active;
+}

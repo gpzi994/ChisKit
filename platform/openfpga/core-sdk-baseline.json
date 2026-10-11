@@ -1,0 +1,35 @@
+{
+  "core": {
+    "magic": "APF_VER_1",
+    "metadata": {
+      "platform_ids": ["chisburner"],
+      "shortname": "ChisBurner",
+      "description": "ChisBurner SDK baseline smoke test",
+      "author": "ChisBurner",
+      "url": "",
+      "version": "0.1.0-smoke.6",
+      "date_release": "2026-09-01"
+    },
+    "framework": {
+      "target_product": "Analogue Pocket",
+      "version_required": "2.2",
+      "sleep_supported": false,
+      "dock": {
+        "supported": true,
+        "analog_output": false
+      },
+      "hardware": {
+        "link_port": true,
+        "cartridge_adapter": 0
+      }
+    },
+    "cores": [
+      {
+        "name": "default",
+        "id": 0,
+        "filename": "os25.rbf_r",
+        "chip32_vm": "loader.bin"
+      }
+    ]
+  }
+}

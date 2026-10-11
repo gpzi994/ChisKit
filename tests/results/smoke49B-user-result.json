@@ -1,0 +1,31 @@
+{
+  "package": "smoke.49B-fullfile-control",
+  "source": "user report and two photographed diagnostic pages in this thread",
+  "pocket_firmware": "2.6 (previous user report)",
+  "read4_rc": 0,
+  "read_contents_compared": false,
+  "flush_rc": -12,
+  "open_read": {
+    "f8_read": 206,
+    "f8_tx": 207,
+    "f8_write": 14,
+    "table_read": 0,
+    "busy": 2,
+    "completed": 2,
+    "status_writes": 4,
+    "last_status": "6F6B0000"
+  },
+  "flush": {
+    "f8_read": 5051550,
+    "f8_tx": 5051550,
+    "f8_write": 0,
+    "table_read": 0,
+    "busy": 0,
+    "completed": 0,
+    "first_command": "636D0188",
+    "last_command": "636D0188",
+    "tx_abort": 0,
+    "lost": 0
+  },
+  "interpretation_limit": "TX is not confirmation of host decoding. -12 is OS timeout, not a host response code. Flush remains unresolved."
+}

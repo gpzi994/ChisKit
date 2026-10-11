@@ -1,0 +1,302 @@
+#------------------------------------------------------------------------------
+# SPDX-License-Identifier: Apache-2.0
+# SPDX-FileType: SOURCE
+# SPDX-FileCopyrightText: (c) 2026, ThinkElastic <Think@Elastic.com>
+#------------------------------------------------------------------------------
+
+# openfpgaOS Makefile
+#
+# Quick start:
+#   make              Show this help
+#   make full         os → build → test
+#   make build        Quartus clean compile (auto-runs cpu if missing)
+#   make firmware     Bootloader + os.bin + bitstream MIF patch
+#   make os           Just os.bin → build/
+
+# ── Target ───────────────────────────────────────────────────────────
+# Default target resolution, highest priority first:
+#   1. command line:  make build TARGET=mister
+#   2. environment:   export TARGET=mister
+#   3. .target file:  make use-mister   (gitignored, per-checkout sticky)
+#   4. fallback:      pocket
+TARGET ?= $(strip $(shell cat .target 2>/dev/null))
+ifeq ($(TARGET),)
+override TARGET := pocket
+endif
+TARGET_DIR = src/fpga/targets/$(TARGET)
+# Directories only (trailing-slash glob) so a stray file never reads as a target.
+TARGETS = $(notdir $(patsubst %/,%,$(wildcard src/fpga/targets/*/)))
+
+# ── Variant (sticky display only — resolution lives in each target) ──
+# `make use-<variant>` (e.g. use-os30) writes .variant; each target Makefile
+# reads it as a SOFT default (applied only when the name is one of that
+# target's variants/<name>.mk, so a sticky pocket variant never breaks a
+# mister build).  VARIANT=<v> on any root goal forwards to the target via
+# MAKEFLAGS.  Built-in default: os25 (pocket).
+STICKY_VARIANT := $(strip $(shell cat .variant 2>/dev/null))
+# Every variant of every target, for use-% validation/help.
+ALL_VARIANTS = $(sort $(basename $(notdir $(wildcard src/fpga/targets/*/variants/*.mk))))
+
+# ── Paths ────────────────────────────────────────────────────────────
+# The root knows only the SDK-sync inputs and the shared clean targets.
+# Each target owns its own build/<target>/ layout and packaging — the
+# root delegates `package` and per-target `sdk-runtime.sh` so no target
+# name appears here (see docs/ADDING_A_TARGET.md).
+CORE_NAME    = ThinkElastic.openfpgaOS
+CHIP32_DIR   = src/fpga/targets/$(TARGET)/chip32   # cleaned per-target; absent targets no-op
+BUILD_DIR    = build
+TOOLS_DIR    = tools
+DIST_DIR     = dist/core
+REVERSE_BITS = $(TOOLS_DIR)/reverse_bits
+
+# ── Colors ───────────────────────────────────────────────────────────
+ifneq ($(shell tput colors 2>/dev/null),)
+C_LOGO  := \033[96m
+C_HEAD  := \033[1m
+C_CMD   := \033[93m
+C_OK    := \033[32m
+C_ERR   := \033[31m
+C_DIM   := \033[2m
+C_RESET := \033[0m
+else
+C_LOGO  :=
+C_HEAD  :=
+C_CMD   :=
+C_OK    :=
+C_ERR   :=
+C_DIM   :=
+C_RESET :=
+endif
+
+# ── Default ──────────────────────────────────────────────────────────
+all: help
+
+# ── Help ─────────────────────────────────────────────────────────────
+help:
+	@printf "$(C_LOGO)"
+	@echo "           ___  ___  ___ ___"
+	@echo "          / _ \\/ _ \\/ -_) _ \\"
+	@echo "          \\___/ .__/\\__/_//_/"
+	@echo "         ____/_/  ________"
+	@echo "        / __/ _ \\/ ___/ _ |"
+	@echo "       / _// ___/ (_ / __ |"
+	@echo "      /_/_/_/___\\___/_/ |_|"
+	@echo "     / __ \\/ __/"
+	@echo "    / /_/ /\\ \\"
+	@printf '    \\____/___/  '
+	@printf "$(C_CMD)v0.7$(C_RESET) OS\n"
+	@printf "$(C_RESET)\n"
+	@printf "  $(C_HEAD)Target:$(C_RESET) $(C_CMD)$(TARGET)$(C_RESET) $(C_DIM)(available: $(TARGETS))$(C_RESET)   $(C_HEAD)Variant:$(C_RESET) $(C_CMD)$(if $(STICKY_VARIANT),$(STICKY_VARIANT),target default)$(C_RESET) $(C_DIM)(available: $(ALL_VARIANTS))$(C_RESET)\n\n"
+	@printf "  $(C_HEAD)Targets:$(C_RESET)\n"
+	@printf "    Every goal below takes $(C_CMD)TARGET=$(C_CMD)<name>$(C_RESET) and (where the target defines them) $(C_CMD)VARIANT=$(C_CMD)<name>$(C_RESET)\n"
+	@printf "    — e.g. $(C_CMD)make full TARGET=$(firstword $(filter-out $(TARGET),$(TARGETS)) <name>)$(C_RESET) or $(C_CMD)make build VARIANT=os30$(C_RESET)\n"
+	@# Target list is generated from the directories under src/fpga/targets/,
+	@# each with an optional one-line about.txt — add a target = add a dir.
+	@for t in $(TARGETS); do \
+		a=""; [ -f src/fpga/targets/$$t/about.txt ] && a="$$(cat src/fpga/targets/$$t/about.txt)"; \
+		printf "    $(C_DIM)%-8s %s$(C_RESET)\n" "$$t" "$$a"; \
+	done
+	@printf "    $(C_DIM)Switching targets auto-rebuilds the firmware objects — no manual clean needed.$(C_RESET)\n"
+	@printf "    $(C_CMD)make $(C_CMD)use-<name>$(C_RESET)        Make a target OR variant the default for this checkout\n"
+	@printf "    $(C_DIM)                       (use-mister → .target, use-os30 → .variant; undo with$(C_RESET)\n"
+	@printf "    $(C_DIM)                       make use-default — built-in default is pocket / os25)$(C_RESET)\n\n"
+	@printf "  $(C_HEAD)Build:$(C_RESET)\n"
+	@printf "    $(C_CMD)make $(C_CMD)full$(C_RESET)              cpu → bootloader → os → build      $(C_DIM)(~9 min)$(C_RESET)\n"
+	@printf "    $(C_CMD)make $(C_CMD)build$(C_RESET)             cpu → Quartus compile → bitstream  $(C_DIM)(~7 min)$(C_RESET)\n"
+	@printf "    $(C_CMD)make $(C_CMD)firmware$(C_RESET)          bootloader → os → MIF patch        $(C_DIM)(~10 sec)$(C_RESET)\n"
+	@printf "    $(C_CMD)make $(C_CMD)os$(C_RESET)                Builds os.bin                      $(C_DIM)(~5 sec)$(C_RESET)\n"
+	@printf "    $(C_CMD)make $(C_CMD)clean$(C_RESET)             Remove all build artifacts\n"
+	@echo ""
+	@printf "  $(C_HEAD)Development:$(C_RESET)\n"
+	@printf "    $(C_CMD)make $(C_CMD)test$(C_RESET)              Run Verilator test suite           $(C_DIM)(~30 sec)$(C_RESET)\n"
+	@printf "    $(C_CMD)make $(C_CMD)check$(C_RESET)             RTL check (Analysis & Synthesis)   $(C_DIM)(~45 sec)$(C_RESET)\n"
+	@printf "    $(C_CMD)make $(C_CMD)timing$(C_RESET)            Show Fmax and slack from last build\n"
+	@printf "    $(C_CMD)make $(C_CMD)report$(C_RESET)            Resource summary $(C_DIM)(FULL=true: +top entities, 25 worst paths)$(C_RESET)\n"
+	@printf "    $(C_CMD)make $(C_CMD)sweep $(C_CMD)SEEDS=$(C_CMD)1-30$(C_RESET)  Seed sweep, pick best Fmax         $(C_DIM)(~7 min/seed)$(C_RESET)\n"
+	@printf "    $(C_CMD)make $(C_CMD)sdk $(C_CMD)DEST=$(C_CMD)\"path\"$(C_RESET)   Sync headers + runtime to SDK repo(s)\n"
+	@printf "    $(C_CMD)make $(C_CMD)program$(C_RESET)           JTAG program via USB Blaster $(C_DIM)(pocket)$(C_RESET)\n"
+	@printf "    $(C_CMD)make $(C_CMD)deploy$(C_RESET)            Refresh build/<target>/ core artifacts $(C_DIM)(device push lives in the SDK)$(C_RESET)\n"
+	@printf "    $(C_CMD)make $(C_CMD)package$(C_RESET)           SD-card layout → build/<target>/ $(C_DIM)(pocket=APF tree, mister=rbf+boot.rom+release zip)$(C_RESET)\n"
+	@printf "    $(C_CMD)make $(C_CMD)release$(C_RESET)           Package + draft a GitHub release $(C_DIM)(mister core)$(C_RESET)\n"
+	@echo ""
+
+# ── Sticky default target / variant ──────────────────────────────────
+# `make use-<name>` resolves <name> against BOTH registries:
+#   a target dir  (src/fpga/targets/<name>/)             → written to .target
+#   a variant     (src/fpga/targets/*/variants/<name>.mk) → written to .variant
+# Both files are gitignored, per-checkout sticky.  Target and variant are
+# independent — `make use-mister` then `make use-os30` keeps both settings
+# (the variant applies whenever the selected target has it).
+# `make use-default` removes both (back to pocket / os25).
+use-%:
+	@if [ -d src/fpga/targets/$* ]; then \
+		echo $* > .target; \
+		printf "  $(C_OK)default target$(C_RESET) → $(C_CMD)$*$(C_RESET) (stored in .target)\n"; \
+	elif ls src/fpga/targets/*/variants/$*.mk >/dev/null 2>&1; then \
+		echo $* > .variant; \
+		t=$$(basename $$(dirname $$(dirname $$(ls src/fpga/targets/*/variants/$*.mk | head -1)))); \
+		printf "  $(C_OK)default variant$(C_RESET) → $(C_CMD)$*$(C_RESET) (stored in .variant; a $$t variant)\n"; \
+	else \
+		printf "$(C_ERR)Error: '$*' is neither a target nor a variant$(C_RESET)\n"; \
+		printf "  targets:  $(TARGETS)\n"; \
+		printf "  variants: $(ALL_VARIANTS)\n"; \
+		exit 1; \
+	fi
+
+use-default:
+	@rm -f .target .variant
+	@printf "  $(C_OK)default target$(C_RESET) → $(C_CMD)pocket$(C_RESET), $(C_OK)variant$(C_RESET) → $(C_CMD)os25$(C_RESET) (built-in)\n"
+
+# ── Target validation ────────────────────────────────────────────────
+check-target:
+	@test -d $(TARGET_DIR) || { \
+		printf "$(C_ERR)Error: unknown target '$(TARGET)'$(C_RESET)\n"; \
+		printf "Available: $(TARGETS)\n"; \
+		exit 1; \
+	}
+
+# ── Full build ───────────────────────────────────────────────────────
+full: check-target
+	@$(MAKE) -C $(TARGET_DIR) full
+
+# ── Seed sweep (default 1-30) ────────────────────────────────────────
+SEEDS ?= 1-30
+SWEEP_MIN = $(word 1,$(subst -, ,$(SEEDS)))
+SWEEP_MAX = $(word 2,$(subst -, ,$(SEEDS)))
+
+# ── Delegate to target Makefile ──────────────────────────────────────
+# Every standard goal is forwarded verbatim to the selected target's
+# Makefile (src/fpga/targets/<target>/Makefile).  The shared root names
+# no target: a new target is "add a directory implementing this goal
+# set" (see docs/ADDING_A_TARGET.md for the contract).  `package` is in
+# the list too — each target owns its own packaging layout (pocket = APF
+# SD tree, mister = rbf + boot.rom, …).
+cpu bootloader firmware os compile build build-all check test timing report program deploy package release sweep-all: check-target
+	@$(MAKE) -C $(TARGET_DIR) $@ FULL=$(FULL) PREV="$(PREV)" PUBLISH="$(PUBLISH)"
+
+sweep: check-target
+	@$(MAKE) -C $(TARGET_DIR) sweep SWEEP_MIN=$(SWEEP_MIN) SWEEP_MAX=$(SWEEP_MAX)
+
+# (package now lives entirely inside each target's Makefile — see the
+# delegated-goal list above and docs/ADDING_A_TARGET.md.)
+
+# ── SDK sync ─────────────────────────────────────────────────────────
+#
+# Push the canonical SDK files from the OS source tree (the source of
+# truth) into one or more SDK checkouts. Replaces the SDK's contents:
+#
+#   src/sdk/include/of_*.h     <- src/firmware/api/of_*.h
+#   src/sdk/sdk.mk             <- src/firmware/api/sdk.mk
+#   src/sdk/app.ld             <- src/firmware/api/app.ld
+#   src/sdk/of_midi.c          <- src/firmware/api/of_midi.c
+#   src/sdk/pc/of_sdl2.c       <- src/firmware/api/pc/of_sdl2.c
+#   src/sdk/musl/include/      <- src/firmware/musl/include/
+#   src/sdk/musl/lib/          <- src/firmware/musl/lib/
+#                                  (libc.a, libm.a, crt1.o, crti.o, crtn.o)
+#   runtime/…                  <- each target's sdk-runtime.sh (bitstream,
+#                                  kernel, loader, .sof — per-target layout)
+#   runtime/bank.ofsf          <- SC-55 GM bank (target-agnostic)
+#
+# Stale files retired in earlier OS-source cleanups (libc/, of_libc.h,
+# of_link.h, of_bram.h, of_posix.c, crt/start.S, ...) are removed from
+# the SDK so the new musl-static build path takes effect cleanly.
+#
+# musl ships to the SDK, so it MUST come from the same containerized
+# riscv64-unknown-elf toolchain as the firmware and the SDK app builds —
+# auto-build it in the firmware container instead of asking for a host
+# build (USE_FIRMWARE_CONTAINER=0 opts into host, matching the targets).
+USE_FIRMWARE_CONTAINER ?= 1
+ifeq ($(USE_FIRMWARE_CONTAINER),1)
+FW_MAKE = bash tools/firmware-container.sh
+else
+FW_MAKE = $(MAKE) -C src/firmware/os
+endif
+
+sdk: check-target
+	@test -n "$(DEST)" || { \
+		printf "$(C_ERR)Usage: make sdk DEST=\"path/to/sdk\"$(C_RESET)\n"; \
+		exit 1; \
+	}
+	@test -f src/firmware/musl/lib/libc.a || { \
+		printf "$(C_HEAD)[sdk]$(C_RESET) musl not built — building in the firmware container...\n"; \
+		$(FW_MAKE) musl; \
+	}
+	@test -f src/firmware/musl/lib/crt1.o || { \
+		printf "$(C_ERR)musl crt1.o missing -- musl build incomplete, see src/firmware/musl/build_musl.sh$(C_RESET)\n"; \
+		exit 1; \
+	}
+	@for dir in $(DEST); do \
+		test -d "$$dir/src/sdk" || { \
+			printf "$(C_ERR)SDK not found at $$dir$(C_RESET)\n"; \
+			continue; \
+		}; \
+		printf "$(C_HEAD)[sdk]$(C_RESET) $$dir\n"; \
+		rsync -a --delete \
+			--include='*/' --include='*.h' --exclude='*' \
+			src/firmware/api/ "$$dir/src/sdk/include/"; \
+		printf "  $(C_OK)headers + SDL2$(C_RESET) → src/sdk/include/\n"; \
+		rsync -a --delete \
+			--include='of_*.c' --include='of_*.cpp' \
+			--include='sdk.mk' --include='app.ld' \
+			--exclude='*' \
+			src/firmware/api/ "$$dir/src/sdk/"; \
+		printf "  $(C_OK)sources + sdk.mk + app.ld$(C_RESET) → src/sdk/\n"; \
+		mkdir -p "$$dir/src/sdk/pc"; \
+		rsync -a --delete src/firmware/api/pc/ "$$dir/src/sdk/pc/"; \
+		printf "  $(C_OK)pc SDL backend$(C_RESET) → src/sdk/pc/\n"; \
+		mkdir -p "$$dir/src/sdk/musl/include" "$$dir/src/sdk/musl/lib"; \
+		rsync -a --delete src/firmware/musl/include/ "$$dir/src/sdk/musl/include/"; \
+		cp src/firmware/musl/lib/libc.a    "$$dir/src/sdk/musl/lib/"; \
+		cp src/firmware/musl/lib/libm.a    "$$dir/src/sdk/musl/lib/" 2>/dev/null || true; \
+		cp src/firmware/musl/lib/crt1.o    "$$dir/src/sdk/musl/lib/"; \
+		cp src/firmware/musl/lib/crti.o    "$$dir/src/sdk/musl/lib/"; \
+		cp src/firmware/musl/lib/crtn.o    "$$dir/src/sdk/musl/lib/"; \
+		printf "  $(C_OK)musl$(C_RESET)           → src/sdk/musl/\n"; \
+		mkdir -p "$$dir/tools/docker"; \
+		cp tools/sdk-container.sh         "$$dir/tools/sdk-container.sh"; \
+		chmod +x                          "$$dir/tools/sdk-container.sh"; \
+		cp tools/oci.sh                   "$$dir/tools/oci.sh"; \
+		cp tools/docker/Dockerfile.firmware "$$dir/tools/docker/Dockerfile.firmware"; \
+		printf "  $(C_OK)container$(C_RESET)      → tools/sdk-container.sh + tools/oci.sh + tools/docker/Dockerfile.firmware\n"; \
+		mkdir -p "$$dir/dist/sdk/Cores/$(CORE_NAME)"; \
+		for f in core.json video.json audio.json input.json data.json variants.json interact.json; do \
+			cp "$(DIST_DIR)/$$f" "$$dir/dist/sdk/Cores/$(CORE_NAME)/"; \
+			for t in $(TARGETS); do \
+				[ -d "$$dir/build/$$t/sdk/Cores/$(CORE_NAME)" ] && \
+					cp "$(DIST_DIR)/$$f" "$$dir/build/$$t/sdk/Cores/$(CORE_NAME)/" || true; \
+			done; \
+		done; \
+		for t in $(TARGETS); do \
+			[ -d "$$dir/src/sdk/platforms/$$t/templates" ] && \
+				cp "$(DIST_DIR)/video.json" "$$dir/src/sdk/platforms/$$t/templates/video.json" || true; \
+		done; \
+		printf "  $(C_OK)core json$(C_RESET)      → dist/sdk/Cores/$(CORE_NAME)/\n"; \
+		rm -rf  "$$dir/src/sdk/libc" "$$dir/src/sdk/crt"; \
+		mkdir -p "$$dir/runtime"; \
+		absdest=$$(cd "$$dir" && pwd); \
+		for t in $(TARGETS); do \
+			[ -f src/fpga/targets/$$t/sdk-runtime.sh ] && \
+				bash src/fpga/targets/$$t/sdk-runtime.sh "$$absdest" || true; \
+		done; \
+		test -f assets/banks/sc55.ofsf && cp assets/banks/sc55.ofsf "$$dir/runtime/bank.ofsf" && \
+			printf "  $(C_OK)sc55.ofsf$(C_RESET)      → runtime/bank.ofsf\n" || true; \
+		( cd "$$dir/runtime" && { \
+			echo "# openfpgaOS runtime publish manifest — written by 'make sdk'."; \
+			echo "# Consumers (platforms/<t>/image.sh) verify staged artifacts against"; \
+			echo "# these md5s; a mismatch means a hand-mixed runtime set, which boots"; \
+			echo "# into undefined behaviour.  source: $$(git -C '$(CURDIR)' describe --always --dirty)"; \
+			find . -type f ! -name MANIFEST -print0 | sort -z | xargs -0 md5sum; \
+		} > MANIFEST ); \
+		printf "  $(C_OK)MANIFEST$(C_RESET)       → runtime/MANIFEST\n"; \
+		printf "$(C_OK)[sdk] Done$(C_RESET) $$dir\n\n"; \
+	done
+
+# ── Clean ────────────────────────────────────────────────────────────
+clean:
+	@$(MAKE) -C $(TARGET_DIR) clean-all
+	@$(MAKE) -C $(CHIP32_DIR) clean 2>/dev/null || true
+	@rm -rf $(BUILD_DIR)
+	@rm -f $(REVERSE_BITS)
+
+.PHONY: all help check-target full cpu bootloader firmware os compile build build-all check test timing report program sdk deploy
+.PHONY: sweep sweep-all package release clean use-default

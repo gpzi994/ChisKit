@@ -1,0 +1,8 @@
+ChisBurner
+
+TF-card dynamic output and streaming-write diagnostic.
+
+This build does not request cartridge access. It creates one 1 MiB + 37 byte
+file in the ChisBurner platform Saves tree, writes it in 32 KiB blocks, and
+explicitly flushes it. Cartridge ROM, save memory and write signals are not
+accessed.

@@ -1,0 +1,16 @@
+{
+  "test": "smoke.43 OPEN -> FLUSH, no output writes",
+  "pocket_firmware_user_reported": "V2.6",
+  "user_output_verbatim": [
+    "open flush；no wrire",
+    "flush rc=-12",
+    "ack timeout #40 rc-12"
+  ],
+  "inference": "Streaming output writes are not required to trigger the ACK timeout. The exact handshake stage remains unknown.",
+  "status_hex_reported": null,
+  "previous_stream_timeout_counter": 73,
+  "no_write_timeout_counter": 40,
+  "omitted_output_write_calls": 33,
+  "counter_difference_matches_omitted_writes": true,
+  "hardware_flush_fixed": false
+}

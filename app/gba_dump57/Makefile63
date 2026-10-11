@@ -1,0 +1,22 @@
+OPENFPGA_SDK ?= /home/lin13/work/ONS_FPGA/openfpgaSDK
+PROJECT_ROOT := $(abspath ../..)
+SDK_DIR := $(OPENFPGA_SDK)/src/sdk
+OUTPUT_API_DIR := $(PROJECT_ROOT)/.integration/openfpgaos/src/firmware/api
+BUILD_DIR := $(PROJECT_ROOT)/build/dump63-app
+OBJ_DIR := $(BUILD_DIR)
+SRCS := main63.c identify56_link.c db55_link.c
+CFLAGS += -I$(OUTPUT_API_DIR)
+USE_SDK_CONTAINER ?= 0
+.DEFAULT_GOAL := all
+include $(SDK_DIR)/sdk.mk
+all: $(BUILD_DIR)/app.elf
+	@$(SIZE) -A $<
+host-test:
+	mkdir -p $(BUILD_DIR)
+	cc -DOF_PC -O2 -Wall -Wextra -Werror -I$(OUTPUT_API_DIR) main63.c identify56_link.c db55_link.c -o $(BUILD_DIR)/pc-ui
+	$(BUILD_DIR)/pc-ui >/dev/null
+	cc -DOF_PC -O1 -g -Wall -Wextra -Werror -fsanitize=address,undefined -I$(OUTPUT_API_DIR) test_dump57.c identify56_link.c db55_link.c -o $(BUILD_DIR)/dump-test
+	$(BUILD_DIR)/dump-test '/mnt/c/Users/lin13/Downloads/[1MSRAM][FTC]口袋妖怪 - 宝石_中文典藏版[漫游&TGB联合汉化].gba'
+	cc -O1 -g -Wall -Wextra -Werror -fsanitize=address,undefined test_dynamic63.c -o $(BUILD_DIR)/dynamic-test
+	$(BUILD_DIR)/dynamic-test
+.PHONY: all host-test

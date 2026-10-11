@@ -1,0 +1,17 @@
+-- ChisBurner deterministic build identifier.
+-- Keep this file stable so identical RTL and fitter settings remain
+-- reproducible.  The APF datatable reads only the three words below.
+
+DEPTH = 1024;
+WIDTH = 32;
+ADDRESS_RADIX = HEX;
+DATA_RADIX = HEX;
+
+CONTENT
+BEGIN
+   [000..0DF] : 00000000;
+   0E0 : 20260901;
+   0E1 : 00000000;
+   0E2 : 46474258;
+   [0E3..3FF] : 00000000;
+END;

@@ -1,0 +1,6 @@
+ChisBurner
+
+SDK/openfpgaOS pin-inert cartridge protocol integration test.
+
+Version: 0.1.0-smoke.24-query-ping
+Empty-slot QUERY_FW_INFO/PING probe. Cartridge reads and writes remain disabled.

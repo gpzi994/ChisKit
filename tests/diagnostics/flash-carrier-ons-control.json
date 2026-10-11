@@ -1,0 +1,22 @@
+{
+  "instance": {
+    "magic": "APF_VER_1",
+    "data_slots": [
+      { "id": 1, "filename": "os.bin" },
+      { "id": 2, "filename": "onssmoke.ini" },
+      { "id": 3, "filename": "onssmoke.elf" },
+      { "id": 4, "filename": "smoke.dat" },
+      { "id": 7, "filename": "bank.ofsf" },
+      { "id": 10, "filename": "onssmoke_0.sav" },
+      { "id": 11, "filename": "onssmoke_1.sav" },
+      { "id": 12, "filename": "onssmoke_2.sav" },
+      { "id": 13, "filename": "onssmoke_3.sav" },
+      { "id": 14, "filename": "onssmoke_4.sav" },
+      { "id": 15, "filename": "onssmoke_5.sav" },
+      { "id": 16, "filename": "onssmoke_6.sav" },
+      { "id": 17, "filename": "onssmoke_7.sav" },
+      { "id": 18, "filename": "onssmoke_8.sav" },
+      { "id": 19, "filename": "onssmoke_9.sav" }
+    ]
+  }
+}

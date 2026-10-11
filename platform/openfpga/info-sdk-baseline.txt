@@ -1,0 +1,6 @@
+ChisBurner
+
+SDK integration baseline used to verify the Pocket core, loader, OS, and ELF path.
+
+Version: 0.1.0-smoke.6
+The cartridge interface is not exercised in this build.

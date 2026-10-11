@@ -1,0 +1,19 @@
+set_global_assignment -name FAMILY "Cyclone V"
+set_global_assignment -name DEVICE 5CEBA4F23C8
+set_global_assignment -name TOP_LEVEL_ENTITY core_top
+set_global_assignment -name PROJECT_OUTPUT_DIRECTORY output_files
+set_global_assignment -name NUM_PARALLEL_PROCESSORS 8
+# Direct-core smoke compilation intentionally leaves framework inputs unused.
+set_global_assignment -name MESSAGE_DISABLE 15610
+
+set_global_assignment -name SYSTEMVERILOG_FILE ../core/cartridge_hal/pct_cart_guard.sv
+set_global_assignment -name SYSTEMVERILOG_FILE ../core/cartridge_hal/pct_cart_safe_pins.sv
+set_global_assignment -name SYSTEMVERILOG_FILE ../core/platform/openfpga/pct_apf_host_port.sv
+set_global_assignment -name SYSTEMVERILOG_FILE ../core/platform/openfpga/pct_apf_target_port.sv
+set_global_assignment -name SYSTEMVERILOG_FILE ../core/storage/pct_storage_sm.sv
+set_global_assignment -name SYSTEMVERILOG_FILE ../core/storage/pct_storage_buffers.sv
+set_global_assignment -name SYSTEMVERILOG_FILE ../core/pct_core_skeleton.sv
+set_global_assignment -name SYSTEMVERILOG_FILE ../core/platform/openfpga/core_top.sv
+
+# Analysis-and-synthesis smoke project only. It deliberately has no Pocket pin
+# assignments and cannot produce a hardware-installable core package.

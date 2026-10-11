@@ -1,0 +1,1202 @@
+//------------------------------------------------------------------------------
+// SPDX-License-Identifier: Apache-2.0
+// SPDX-FileType: SOURCE
+// SPDX-FileCopyrightText: (c) 2026, ThinkElastic <Think@Elastic.com>
+//------------------------------------------------------------------------------
+
+/*
+ * openfpgaOS Kernel Main
+ * Initializes HAL, loads application ELF, and executes it
+ */
+
+#include "../hal/hal.h"
+#include "../hal/memtest.h"
+#include "syscall.h"
+#include "loader.h"
+#include "caps_table.h"
+#include "services_table.h"
+#include "bank_preload.h"
+#include "irq.h"
+#include "config.h"
+#include "launch.h"
+#include <stddef.h>
+#include <string.h>
+
+#ifdef OF_DEBUG_WALL_REVEAL
+/* Debug boot breadcrumbs (targets/pocket/video.c): launch-path stage codes
+ * stamped into FB0 — the only display channel on MiSTer's fb_direct path,
+ * where the console is invisible.  DISABLED pending root-cause: even the
+ * pure-paint variant correlated with the boot console never appearing on
+ * hardware (2026-08-13 bisect); define OF_DEBUG_BOOT_STAMPS to re-enable. */
+extern void of_video_dbg_boot_stamp(uint32_t code, uint32_t aux);
+#ifdef OF_DEBUG_BOOT_STAMPS
+#define BOOT_STAMP(c, a) of_video_dbg_boot_stamp((c), (a))
+#else
+#define BOOT_STAMP(c, a) ((void)0)
+#endif
+#else
+#define BOOT_STAMP(c, a) ((void)0)
+#endif
+
+/* Layout-shift pad for boot-lottery bisection (sim + HW pad sweeps).
+ * Build with EXTRA_CFLAGS=-DOS_LAYOUT_PAD=<bytes> to insert N bytes of
+ * never-referenced data into .text, shifting every symbol downstream of
+ * this translation unit's placement — the same class of byte-layout
+ * change that separates booting from black kernels on MiSTer.  Zero
+ * runtime effect; absent from normal builds. */
+#if defined(OS_LAYOUT_PAD) && OS_LAYOUT_PAD > 0
+__attribute__((used, section(".text.zzz_os_layout_pad"), aligned(4)))
+static const unsigned char os_layout_pad[OS_LAYOUT_PAD] = { 0x13 };
+#endif
+
+/* Data slot IDs (match data.json) */
+#define APP_SLOT_ID     3       /* Default application ELF binary */
+#define APP_DEFAULT_ELF "app.elf"
+#define APP_ELF_NAME_MAX 64
+#define APP_ARGS_MAX     512
+#define APP_ARGC_MAX     32
+
+/* Fallback load address for PIE (ET_DYN) apps that have vaddrs relative to 0.
+ * ET_EXEC apps linked at a nonzero base (e.g. 0x10400000 SDRAM) ignore this
+ * and use their own absolute vaddrs.  Matches __app_load_base in os.ld and
+ * must stay in SDRAM, not the CRAM0 nonvolatile window. */
+#define APP_LOAD_ADDR   0x10400000u
+
+/* Symbols from linker script */
+extern char __os_bss_end[];
+
+/* OS .text integrity guard (kernel/misaligned.c).  Baseline the loaded code
+ * once it is known-good, then check at each boot checkpoint; the first failing
+ * checkpoint brackets the operation that overwrites the OS .text at runtime. */
+void os_textguard_baseline(void);
+void os_textguard_check(const char *where);
+
+/* SW-mixer DAC pump driver: OS-owned 1 kHz timer arm (syscall.c). */
+void of_os_timer_boot_arm(void);
+
+#if CHISBURNER_PSRAM128_BOOT
+static volatile int psram128_async_done;
+static volatile int psram128_async_result;
+static void psram128_async_callback(int token, int result) {
+    (void)token;
+    psram128_async_result = result;
+    psram128_async_done = 1;
+}
+
+static uint8_t psram128_pattern(uint32_t offset, uint32_t salt) {
+    return (uint8_t)((offset * 37u + salt) & 0xffu);
+}
+#endif
+#if CHISBURNER_PSRAM129_BOOT
+#define PSRAM129_SLOT       6u
+#define PSRAM129_HALF_BYTES 0x01000000u
+#define PSRAM129_CHUNK      4096u
+#define PSRAM129_CRC0_EXPECT 0x475ef0f6u
+#define PSRAM129_CRC1_EXPECT 0xb5e23c21u
+#endif
+
+/* Zero OS .bss in SDRAM from BRAM.  This runs before os_main(), while
+ * SDRAM has just been populated by the bootloader and before the OS
+ * can rely on its own .bss state.  Keep it in .fasttext so the first
+ * uncached SDRAM cleanup does not execute from SDRAM at the same time. */
+__attribute__((noinline, section(".fasttext.os_finalize_memory"), aligned(4)))
+void os_finalize_memory(void *bss_start, void *bss_end) {
+    /* Bypass cache via uncached SDRAM alias (0x10... → 0x50...).
+     * If cache writeback is what's wedging the LSU FIFO, this
+     * sidesteps it. */
+    uint32_t bss_uc_start = ((uint32_t)(uintptr_t)bss_start) - 0x10000000u + 0x50000000u;
+    uint32_t bss_uc_end   = ((uint32_t)(uintptr_t)bss_end)   - 0x10000000u + 0x50000000u;
+    uint32_t *bss = (uint32_t *)(uintptr_t)bss_uc_start;
+    uint32_t *bend = (uint32_t *)(uintptr_t)bss_uc_end;
+    while (bss < bend)
+        *bss++ = 0;
+    __asm__ volatile("fence" ::: "memory");
+}
+
+/* Draw boot logo. First call clears screen, subsequent calls just recolor. */
+static int logo_drawn = 0;
+
+static void boot_logo(const char *color) {
+    if (!logo_drawn) {
+        of_term_clear();
+        logo_drawn = 1;
+    }
+    of_term_puts("\033[H");  /* cursor home */
+    of_term_puts(color);
+    of_term_putchar('\n');
+    of_term_puts("         ___  ___  ___ ___\n");
+    of_term_puts("        / _ \\/ _ \\/ -_) _ \\\n");
+    of_term_puts("        \\___/ .__/\\__/_//_/\n");
+    of_term_puts("       ____/_/  ________\n");
+    of_term_puts("      / __/ _ \\/ ___/ _ |\n");
+    of_term_puts("     / _// ___/ (_ / __ |\n");
+    of_term_puts("    /_/_/_/___\\___/_/ |_|\n");
+    of_term_puts("   / __ \\/ __/\n");
+    of_term_puts("  / /_/ /\\ \\\n");
+    of_term_puts("  \\____/___/  \033[93mv0.8.1\033[0m\n\n");
+}
+
+static void status_ok(void) {
+    of_term_puts(" \033[92mOK\033[0m\n");
+}
+
+static void status_fail(void) {
+    of_term_puts(" \033[91mFAIL\033[0m\n");
+}
+
+static int app_load_transient(int rc) {
+    return rc == -1 ||  /* missing size / first header read failed */
+           rc == -2 ||  /* bad magic: often stale/partial first bytes */
+           rc == -5 ||  /* program header read failed */
+           rc == -6;    /* segment payload read failed */
+}
+
+static int load_app_with_retries(uint32_t slot_id, elf_load_result_t *app) {
+    int rc = -1;
+
+    for (int attempt = 0; attempt < 32; attempt++) {
+        rc = elf_load(slot_id, APP_LOAD_ADDR, app);
+        if (rc == 0)
+            return 0;
+        if (!app_load_transient(rc))
+            return rc;
+
+        if ((attempt & 3) == 3)
+            of_term_putchar('.');
+        of_timer_delay_ms(250);
+    }
+
+    return rc;
+}
+
+static char app_elf_name[APP_ELF_NAME_MAX];
+static char app_args_buf[APP_ARGS_MAX];
+static char *app_argv[APP_ARGC_MAX + 1];
+
+static int os_cfg_isspace(char c) {
+    return c == ' ' || c == '\t' || c == '\r' || c == '\n';
+}
+
+static char os_cfg_tolower(char c) {
+    if (c >= 'A' && c <= 'Z')
+        return (char)(c + ('a' - 'A'));
+    return c;
+}
+
+static int os_cfg_stricmp(const char *a, const char *b) {
+    while (*a && *b) {
+        char ca = os_cfg_tolower(*a++);
+        char cb = os_cfg_tolower(*b++);
+        if (ca != cb)
+            return (int)(unsigned char)ca - (int)(unsigned char)cb;
+    }
+    return (int)(unsigned char)os_cfg_tolower(*a) -
+           (int)(unsigned char)os_cfg_tolower(*b);
+}
+
+static int os_cfg_parse_slot_ref(const char *s, uint32_t *slot_out) {
+    if (!s || !(s[0] == 's' || s[0] == 'S') ||
+        !(s[1] == 'l' || s[1] == 'L') ||
+        !(s[2] == 'o' || s[2] == 'O') ||
+        !(s[3] == 't' || s[3] == 'T') ||
+        s[4] != ':')
+        return -1;
+
+    const char *p = s + 5;
+    uint32_t slot = 0;
+    int digits = 0;
+    while (*p >= '0' && *p <= '9') {
+        slot = slot * 10u + (uint32_t)(*p - '0');
+        digits++;
+        p++;
+    }
+
+    if (!digits || *p)
+        return -1;
+
+    *slot_out = slot;
+    return 0;
+}
+
+static int resolve_app_slot(const char *elf_name, uint32_t *slot_out) {
+    if (os_cfg_parse_slot_ref(elf_name, slot_out) == 0)
+        return 0;
+
+    if (file_slot_find(elf_name, slot_out) == 0)
+        return 0;
+
+    if (os_cfg_stricmp(elf_name, APP_DEFAULT_ELF) == 0) {
+        *slot_out = APP_SLOT_ID;
+        return 0;
+    }
+
+    return -1;
+}
+
+static int build_app_argv(int *argc_out) {
+    int argc = 1;
+    char *read = app_args_buf;
+    char *write = app_args_buf;
+
+    app_argv[0] = app_elf_name;
+
+    while (*read) {
+        while (os_cfg_isspace(*read))
+            read++;
+        if (!*read)
+            break;
+
+        if (argc >= APP_ARGC_MAX)
+            return OF_CONFIG_ERR_E2BIG;
+
+        app_argv[argc++] = write;
+        char quote = 0;
+
+        while (*read) {
+            char c = *read++;
+
+            if (quote) {
+                if (c == quote) {
+                    quote = 0;
+                    continue;
+                }
+                if (c == '\\' && *read) {
+                    *write++ = *read++;
+                    continue;
+                }
+                *write++ = c;
+                continue;
+            }
+
+            if (c == '\'' || c == '"') {
+                quote = c;
+                continue;
+            }
+            if (c == '\\' && *read) {
+                *write++ = *read++;
+                continue;
+            }
+            if (os_cfg_isspace(c))
+                break;
+
+            *write++ = c;
+        }
+
+        if (quote)
+            return OF_CONFIG_ERR_INVAL;
+
+        *write++ = '\0';
+    }
+
+    app_argv[argc] = NULL;
+    *argc_out = argc;
+    return 0;
+}
+
+/* Resolve the app to launch and build its argv.  When elf_override is non-empty
+ * it takes precedence over [os] ELF (used by the in-OS relaunch path, where the
+ * launcher names the target directly); otherwise the os.ini [os] ELF is used,
+ * defaulting to APP_DEFAULT_ELF. */
+static int prepare_app_launch_ex(const char *elf_override,
+                                 uint32_t *slot_out, int *argc_out) {
+    if (elf_override && elf_override[0]) {
+        strncpy(app_elf_name, elf_override, sizeof(app_elf_name));
+        app_elf_name[sizeof(app_elf_name) - 1] = '\0';
+    } else {
+        strncpy(app_elf_name, APP_DEFAULT_ELF, sizeof(app_elf_name));
+        app_elf_name[sizeof(app_elf_name) - 1] = '\0';
+
+        int rc = of_config_get("os", "ELF", app_elf_name, sizeof(app_elf_name));
+        if (rc == OF_CONFIG_ERR_NOENT)
+            rc = 0;
+        if (rc < 0)
+            return rc;
+    }
+
+    app_args_buf[0] = '\0';
+    int rc = of_config_get("os", "ARGS", app_args_buf, sizeof(app_args_buf));
+    if (rc == OF_CONFIG_ERR_NOENT)
+        rc = 0;
+    if (rc < 0)
+        return rc;
+
+    filesystem_init();
+
+#ifdef OF_TARGET_SUPPORTS_RELAUNCH
+    /* MiSTer F-load app model (Phase 2): when the OSD/MGL has F-loaded an
+     * app.elf into SDRAM staging (HPS_STATUS_ELF_LOADED), the loader must read
+     * those STAGED bytes, not the os.ini "ELF=..." name looked up in the vhd.
+     * targets/mister/file.c serves the staged ELF only through the fixed app-elf
+     * slot (APP_SLOT_ID), so force the slot there; load_app(APP_SLOT_ID) then
+     * reads through elf_slot_read and of_file_size64(APP_SLOT_ID) returns
+     * HPS_ELF_LEN.
+     *
+     * This MUST come before the by-name resolve below.  The staged bytes ARE
+     * the application, so the "ELF=" name need not exist inside boot.vhd at
+     * all — that is the whole point of shipping the engine as a loose,
+     * update-safe file.  Resolving the name first made every launch depend on
+     * a stale duplicate living in the vhd: Doom happened to carry one
+     * (/Doom/common/doom.elf), so it booted; ScummVM's image carries only
+     * assets, so a perfectly good F-loaded engine was rejected with NOENT
+     * ("No application found: scummvm_lucasarts.elf") without the staging
+     * check ever running.
+     *
+     * of_file_app_from_staging() is '0' when no ELF is staged, so the
+     * by-name/vhd resolution below stands unchanged then — backward
+     * compatible for a non-F-loaded core.  Gated to
+     * OF_TARGET_SUPPORTS_RELAUNCH so Pocket/sim are wholly unaffected (the
+     * hook has a no-op '0' stub there, matching of_file_instance_ready). */
+    if (of_file_app_from_staging()) {
+        *slot_out = APP_SLOT_ID;
+        return build_app_argv(argc_out);
+    }
+#endif
+
+    rc = resolve_app_slot(app_elf_name, slot_out);
+    if (rc < 0)
+        return OF_CONFIG_ERR_NOENT;
+
+    return build_app_argv(argc_out);
+}
+
+static int prepare_app_launch(uint32_t *slot_out, int *argc_out) {
+    return prepare_app_launch_ex(NULL, slot_out, argc_out);
+}
+
+#ifdef OF_TARGET_SUPPORTS_RELAUNCH
+/* Two-root derivation for the MiSTer F-load instance model (see
+ * targets/mister/file.c).  The F-loaded os.ini carries [os] GAME + INSTANCE;
+ * from them the OS builds a READ-ONLY shared root ("/<GAME>/common", for
+ * app.elf / sound bank / wads) and a WRITABLE per-instance root
+ * ("/<GAME>/<INSTANCE>", for config + saves), both on the mounted boot.vhd
+ * (volume 0).  When either key is absent (a legacy image), BOTH roots are
+ * cleared so every path stays root-relative — exactly the pre-instance
+ * behavior.  MiSTer only: the of_file_set_*_root setters are no-ops on
+ * Pocket/sim, and this block is not compiled there. */
+#define OS_ROOT_NAME_MAX 48
+#define OS_ROOT_PATH_MAX 112
+static char os_root_game[OS_ROOT_NAME_MAX];
+static char os_root_instance[OS_ROOT_NAME_MAX];
+static char os_common_root[OS_ROOT_PATH_MAX];
+static char os_instance_root[OS_ROOT_PATH_MAX];
+
+static char *os_root_append(char *dst, char *end, const char *src) {
+    while (*src && dst < end - 1)
+        *dst++ = *src++;
+    return dst;
+}
+
+static void os_apply_instance_roots(void) {
+    os_root_game[0] = '\0';
+    os_root_instance[0] = '\0';
+
+    int rg = of_config_get("os", "GAME", os_root_game, sizeof(os_root_game));
+    int ri = of_config_get("os", "INSTANCE",
+                           os_root_instance, sizeof(os_root_instance));
+
+    if (rg == 0 && ri == 0 && os_root_game[0] && os_root_instance[0]) {
+        char *p, *e;
+
+        /* common_root = "/" + GAME + "/common" */
+        p = os_common_root;
+        e = os_common_root + sizeof(os_common_root);
+        *p++ = '/';
+        p = os_root_append(p, e, os_root_game);
+        p = os_root_append(p, e, "/common");
+        *p = '\0';
+
+        /* instance_root = "/" + GAME + "/" + INSTANCE */
+        p = os_instance_root;
+        e = os_instance_root + sizeof(os_instance_root);
+        *p++ = '/';
+        p = os_root_append(p, e, os_root_game);
+        p = os_root_append(p, e, "/");
+        p = os_root_append(p, e, os_root_instance);
+        *p = '\0';
+
+        of_file_set_common_root(os_common_root);
+        of_file_set_instance_root(os_instance_root);
+    } else {
+        /* Legacy image / no keys: root-relative paths (regression-safe). */
+        of_file_set_common_root("");
+        of_file_set_instance_root("");
+    }
+}
+#endif /* OF_TARGET_SUPPORTS_RELAUNCH */
+
+void os_main(void) {
+    /* Clear IRQ callback state and hardware source masks before enabling
+     * machine interrupts.  The bootloader deliberately keeps MIE disabled
+     * while SDRAM .bss is being zeroed. */
+    of_irq_init();
+
+    /* Capture the known-good OS .text straight off the bootloader's verified
+     * load, before any subsystem runs.  Every os_textguard_check() below then
+     * brackets where the runtime .text corruption first appears. */
+    os_textguard_baseline();
+
+    /* Bring up ONLY the contract-stable HAL surfaces (clocks, cache,
+     * timer, video, terminal) — enough to print.  The rest of the
+     * register map is not touched until the handshake and memtest
+     * below have vouched for the core/os pairing. */
+    of_init_early();
+
+    /* Boot stage: red logo = OS initializing */
+    boot_logo("\033[91m");  /* red */
+
+    /* Firmware/bitstream contract handshake.  A mismatched pair used to
+     * boot into undefined behaviour -- blank screen or a trap cascade
+     * with a garbled console that took a night to diagnose.  Halt with a
+     * readable banner instead; only term/video and the timer have been
+     * initialized at this point, both stable across every contract
+     * revision -- a mismatched core cannot wedge us before the banner. */
+    {
+        uint32_t hw_rev = HW_CONTRACT_REV;
+        if (hw_rev == 0) {
+            /* Pre-versioning bitstream: can't verify, warn and proceed so
+             * firmware can still be iterated against existing cores. */
+            of_term_puts("\n  \033[93mWARN contract unverified\033[0m\n");
+            of_timer_delay_ms(3000);
+        } else if (hw_rev != OS_EXPECTED_HW_CONTRACT) {
+            for (;;) {
+                of_term_printf("\n  \033[91mCONTRACT FAIL %u/%u\033[0m\n",
+                               (unsigned)hw_rev,
+                               (unsigned)OS_EXPECTED_HW_CONTRACT);
+                of_timer_delay_ms(3000);
+            }
+        }
+    }
+
+    /* Physical-layer check the contract handshake can't make: controller
+     * interleave / DQ-capture mismatches and timing-marginal cores all
+     * present as scrambled memory.  Runs before the FS/app half of HAL
+     * bring-up (of_init_late below) -- of_memtest_boot() writes to
+     * windows that carry no traffic yet. */
+    of_term_puts("  Memory check...... ");
+    if (of_memtest_boot() == 0) {
+        status_ok();
+    } else {
+        status_fail();
+        for (;;) {
+            of_term_puts("  \033[91mMEMORY FAIL\033[0m\n");
+            of_video_console_reveal();
+            of_timer_delay_ms(3000);
+        }
+    }
+
+#if CHISBURNER_PSRAM127_BOOT
+#if !CHISBURNER_PSRAM127
+#error PSRAM127 boot diagnostic requires the complete PSRAM0 evacuation layout
+#endif
+    /* Stop before of_init_late(): the legacy file/save HAL still contains
+     * CRAM0 paths until the next migration gate.  The counter is sampled here
+     * so this image proves only the new BRAM direct-SDRAM OS loader plus the
+     * early SDRAM-only kernel path. */
+    {
+        uint32_t wc = DS_BRIDGE_WCNT;
+        uint32_t cram_words = wc & DS_BWC_CRAM0_MASK;
+        int pass = cram_words == 0u &&
+                   !(wc & (DS_BWC_CRAM0_DROPPED | DS_BWC_CRAM0_OVERRUN));
+        of_term_clear();
+        of_video_console_reveal();
+        of_term_puts("ChisBurner smoke.127\n\n");
+        of_term_puts("PSRAM0 complete evacuation\n");
+        of_term_puts("OS: TF -> SDRAM direct\n");
+        of_term_puts("OS CRC + execute PASS\n");
+        of_term_printf("CRAM0 bridge words %u\n", (unsigned)cram_words);
+        of_term_printf("Bridge counter %08x\n", (unsigned)wc);
+        of_term_puts(pass ? "\nRESULT: PASS\n" : "\nRESULT: FAIL\n");
+        of_term_puts("Stopped before file/save HAL.\n");
+        of_term_puts("No cartridge or NOR operation.\n");
+        for (;;)
+            of_timer_delay_ms(1000);
+    }
+#endif
+
+    /* Core/os pairing verified: bring up the rest of the HAL (input,
+     * disk, file, mixer, save, analogizer, link). */
+    of_init_late();
+#if CHISBURNER_PSRAM128_BOOT
+#if !CHISBURNER_PSRAM127
+#error PSRAM128 diagnostic requires the complete PSRAM0 evacuation layout
+#endif
+    {
+        enum { INPUT_SLOT = 4, OUTPUT_SLOT = 5, TEST_BYTES = 4096 };
+        uint8_t *scratch =
+            (uint8_t *)(uintptr_t)OF_TARGET_SDRAM_FILE_SCRATCH_ADDR;
+        int rc = 0;
+        const char *stage = "sync TF -> SDRAM";
+        uint32_t checked = 0;
+        char name[64];
+
+        of_term_clear();
+        of_video_console_reveal();
+        of_term_puts("ChisBurner smoke.128-r8\n\n");
+        of_term_puts("File/save paths: SDRAM only\n");
+
+        rc = of_file_read(INPUT_SLOT, 0, scratch, 1024u);
+        if (rc) goto psram128_fail;
+        for (uint32_t i = 0; i < 1024u; i++) {
+            if (scratch[i] != psram128_pattern(i, 0x5au)) {
+                rc = OF_ERR_IO; checked = i; goto psram128_fail;
+            }
+        }
+        of_term_puts("Sync read PASS\n");
+
+        stage = "GETFILE response";
+        rc = of_file_get_name(INPUT_SLOT, name, sizeof(name));
+        if (rc || strcmp(name, "sdram128-input.bin") != 0) {
+            if (!rc) rc = OF_ERR_IO;
+            goto psram128_fail;
+        }
+        of_term_puts("GETFILE SDRAM PASS\n");
+
+        stage = "async TF -> SDRAM";
+        psram128_async_done = 0;
+        psram128_async_result = OF_ERR_TIMEOUT;
+        rc = of_file_read_async(INPUT_SLOT, 1024u, scratch + 2048u,
+                                1024u, psram128_async_callback);
+        if (rc < 0) goto psram128_fail;
+        for (uint32_t wait = 0; wait < 3000u && !psram128_async_done; wait++) {
+            (void)of_file_async_poll();
+            of_timer_delay_ms(1);
+        }
+        if (!psram128_async_done || psram128_async_result) {
+            rc = psram128_async_done ? psram128_async_result : OF_ERR_TIMEOUT;
+            goto psram128_fail;
+        }
+        for (uint32_t i = 0; i < 1024u; i++) {
+            if (scratch[2048u + i] != psram128_pattern(1024u + i, 0x5au)) {
+                rc = OF_ERR_IO; checked = 1024u + i; goto psram128_fail;
+            }
+        }
+        of_term_puts("Async read PASS\n");
+
+        stage = "config SDRAM load";
+        for (uint32_t off = 0; off < TEST_BYTES; off += 64u) {
+            uint8_t block[64];
+            if (of_nvslot_read(8u, block, off, sizeof(block)) !=
+                (int)sizeof(block)) { rc = OF_ERR_IO; goto psram128_fail; }
+            for (uint32_t i = 0; i < sizeof(block); i++) {
+                if (block[i] != psram128_pattern(off + i, 0x33u)) {
+                    rc = OF_ERR_IO; checked = off + i; goto psram128_fail;
+                }
+            }
+        }
+        of_term_puts("Config load PASS\n");
+
+        stage = "save SDRAM writeback";
+        for (uint32_t off = 0; off < TEST_BYTES; off += 64u) {
+            uint8_t block[64];
+            for (uint32_t i = 0; i < sizeof(block); i++)
+                block[i] = psram128_pattern(off + i, 0xa7u);
+            if (of_nvslot_write(10u, block, off, sizeof(block)) !=
+                (int)sizeof(block)) { rc = OF_ERR_IO; goto psram128_fail; }
+        }
+        rc = of_nvslot_flush_size(10u, TEST_BYTES);
+        if (rc) goto psram128_fail;
+        rc = of_file_read(10u, 0, scratch, TEST_BYTES);
+        if (rc) goto psram128_fail;
+        for (uint32_t i = 0; i < TEST_BYTES; i++) {
+            if (scratch[i] != psram128_pattern(i, 0xa7u)) {
+                rc = OF_ERR_IO; checked = i; goto psram128_fail;
+            }
+        }
+        of_term_puts("Save writeback PASS\n");
+
+        stage = "output create";
+        rc = of_file_output_open(
+            OUTPUT_SLOT,
+            "/Assets/chisburnerps128/common/sdram128-output.bin", 1024u);
+        if (rc) goto psram128_fail;
+        of_term_puts("Output create PASS\n");
+        stage = "output write";
+        /* OPEN uses the file scratch for its parameters. Generate payload
+         * afterwards in a separate SDRAM stack buffer, not the HAL bounce. */
+        {
+            uint8_t payload[1024];
+            for (uint32_t i = 0; i < sizeof(payload); i++)
+                payload[i] = psram128_pattern(i, 0xc1u);
+            rc = of_file_output_write(OUTPUT_SLOT, 0, payload, sizeof(payload));
+        }
+        if (rc) goto psram128_fail;
+        of_term_puts("Output write PASS\n");
+        /* Match the hardware-tested smoke.126/production dump contract:
+         * await every WRITE, then independently reread. Target FLUSH 0x0188
+         * has timed out on Pocket; do not reintroduce it in this diagnostic. */
+        stage = "output readback";
+        rc = of_file_read(OUTPUT_SLOT, 0, scratch, 1024u);
+        if (rc) goto psram128_fail;
+        for (uint32_t i = 0; i < 1024u; i++) {
+            if (scratch[i] != psram128_pattern(i, 0xc1u)) {
+                rc = OF_ERR_IO; checked = i; goto psram128_fail;
+            }
+        }
+        of_term_puts("Output compare 1024 PASS\n");
+        of_term_puts("Dynamic output PASS\n");
+
+        stage = "PSRAM0 audit";
+        if (of_file_psram0_violation() != 0u) {
+            rc = OF_ERR_IO;
+            goto psram128_fail;
+        }
+        of_term_puts("PSRAM0 old-use count 0\n");
+        of_term_puts("\nRESULT: PASS\n");
+        of_term_puts("No cartridge/NOR operations.\n");
+        for (;;) of_timer_delay_ms(1000);
+
+psram128_fail:
+        of_term_printf("\nSTOP %s rc %d @ %u\n", stage, rc,
+                       (unsigned)checked);
+        of_term_printf("PSRAM0 audit %08x\n",
+                       (unsigned)of_file_psram0_violation());
+        of_term_puts("RESULT: FAIL\nNo cartridge/NOR operations.\n");
+        for (;;) of_timer_delay_ms(1000);
+    }
+#endif
+#if CHISBURNER_PSRAM129_BOOT
+#if !CHISBURNER_PSRAM127 || !CHISBURNER_PSRAM_CACHE129
+#error PSRAM129 diagnostic requires SDRAM-only legacy paths and dual-PSRAM RTL
+#endif
+    {
+        int rc = 0;
+        const char *stage = "preflight";
+        uint32_t offset = 0;
+        uint32_t status = 0;
+
+        of_term_clear();
+        of_video_console_reveal();
+        of_term_puts("ChisBurner smoke.129-r1\n\n");
+        of_term_puts("TF -> PSRAM0 + PSRAM1\n");
+        of_term_puts("32 MiB cache diagnostic\n");
+
+        if (of_file_size64(PSRAM129_SLOT) != 0x02000000ll) {
+            rc = OF_ERR_BAD_RANGE;
+            goto psram129_fail;
+        }
+        if (of_file_psram0_violation() != 0u) {
+            rc = OF_ERR_IO;
+            goto psram129_fail;
+        }
+        of_term_puts("Old PSRAM0 use: 0 PASS\n");
+
+        stage = "PSRAM1 ready";
+        for (uint32_t ms = 0; ms < 3000u; ms++) {
+            status = PSRAM129_STATUS;
+            if (status & PSRAM129_C1_READY) break;
+            of_timer_delay_ms(1);
+        }
+        if (!(status & PSRAM129_C1_READY)) {
+            rc = OF_ERR_TIMEOUT;
+            goto psram129_fail;
+        }
+
+        stage = "TF -> PSRAM0";
+        for (offset = 0; offset < PSRAM129_HALF_BYTES; offset += PSRAM129_CHUNK) {
+            rc = of_file_psram129_read_chunk(PSRAM129_SLOT, offset,
+                                             0x20000000u + offset,
+                                             PSRAM129_CHUNK);
+            if (rc) goto psram129_fail;
+            if (DS_BRIDGE_WCNT & (DS_BWC_CRAM0_DROPPED | DS_BWC_CRAM0_OVERRUN)) {
+                rc = OF_ERR_IO; goto psram129_fail;
+            }
+            if ((offset & 0x000fffffu) == 0x000ff000u)
+                of_term_printf("P0 %u / 16 MiB\n", (unsigned)((offset >> 20) + 1u));
+        }
+        of_term_puts("PSRAM0 load PASS\n");
+
+        stage = "TF -> PSRAM1";
+        for (offset = 0; offset < PSRAM129_HALF_BYTES; offset += PSRAM129_CHUNK) {
+            rc = of_file_psram129_read_chunk(PSRAM129_SLOT,
+                                             PSRAM129_HALF_BYTES + offset,
+                                             0x22000000u + offset,
+                                             PSRAM129_CHUNK);
+            if (rc) goto psram129_fail;
+            if ((offset & 0x000fffffu) == 0x000ff000u)
+                of_term_printf("P1 %u / 16 MiB\n", (unsigned)((offset >> 20) + 1u));
+        }
+        status = PSRAM129_STATUS;
+        if (status & PSRAM129_C1_DROP) {
+            rc = OF_ERR_IO;
+            goto psram129_fail;
+        }
+        of_term_puts("PSRAM1 load PASS\n");
+
+        stage = "dual CRC scan";
+        PSRAM129_START = 1u;
+        for (uint32_t ms = 0; ms < 120000u; ms++) {
+            status = PSRAM129_STATUS;
+            if ((status & PSRAM129_DONE) && !(status & PSRAM129_ACTIVE)) break;
+            of_timer_delay_ms(1);
+        }
+        if (!(status & PSRAM129_DONE) || (status & PSRAM129_FAULT)) {
+            rc = OF_ERR_TIMEOUT;
+            goto psram129_fail;
+        }
+        of_term_printf("CRC0 %08x expect %08x\n",
+                       (unsigned)PSRAM129_CRC0, (unsigned)PSRAM129_CRC0_EXPECT);
+        of_term_printf("CRC1 %08x expect %08x\n",
+                       (unsigned)PSRAM129_CRC1, (unsigned)PSRAM129_CRC1_EXPECT);
+        if (PSRAM129_CRC0 != PSRAM129_CRC0_EXPECT ||
+            PSRAM129_CRC1 != PSRAM129_CRC1_EXPECT) {
+            rc = OF_ERR_IO;
+            goto psram129_fail;
+        }
+        of_term_puts("16 MiB boundary PASS\n");
+        of_term_puts("Full 32 MiB CRC PASS\n\nRESULT: PASS\n");
+        of_term_puts("No cartridge/NOR operations.\n");
+        for (;;) of_timer_delay_ms(1000);
+
+psram129_fail:
+        status = PSRAM129_STATUS;
+        of_term_printf("\nSTOP %s rc %d @ %08x\n", stage, rc, (unsigned)offset);
+        of_term_printf("status %08x crc %08x %08x\n",
+                       (unsigned)status, (unsigned)PSRAM129_CRC0,
+                       (unsigned)PSRAM129_CRC1);
+        of_term_puts("RESULT: FAIL\nNo cartridge/NOR operations.\n");
+        for (;;) of_timer_delay_ms(1000);
+    }
+#endif
+#if CHISBURNER_SDRAM122_BOOT
+#if !CHISBURNER_SDRAM122 || !defined(SDRAM122_INPUT_SLOT) || !defined(SDRAM122_OUTPUT_SLOT)
+#error SDRAM122 boot diagnostic requires explicit dedicated input/output slots
+#endif
+    /* Dedicated diagnostic boot: no config/app launch or NOR operation.
+     * The test asset and deferred output slot must match the package manifest.
+     * Existing diagnostic output is refused, never overwritten. */
+    {
+        uint32_t checked=0;
+        of_term_clear();
+        of_video_console_reveal();
+#if CHISBURNER_SDRAM123_FIXTURE
+        of_term_puts("ChisBurner smoke.126\n");
+#endif
+        of_term_puts("\nSDRAM122 TF -> SDRAM -> TF\n");
+        int rc=of_file_sdram122_roundtrip(SDRAM122_INPUT_SLOT,
+            SDRAM122_OUTPUT_SLOT,"/Assets/chisburnerdiag/common/sdram122-roundtrip.bin",65539u,&checked);
+        of_term_printf("\nSDRAM122 rc %d / compared %u bytes\n",rc,(unsigned)checked);
+        of_term_puts(rc==0 && checked==65539u ? "RESULT: PASS\n" : "RESULT: FAIL\n");
+        of_term_puts("Diagnostic stopped. No NOR operations.\n");
+        for (;;) of_timer_delay_ms(1000);
+    }
+#endif
+    of_irq_enable_cpu();
+    /* On a SW-audio-mixer build (of_mixer_use_sw, e.g. OS30) the OS owns a
+     * permanent 1 kHz machine-timer tick that drives the CPU DAC pump
+     * (sw_mixer_pump).  Without it audio is silent unless an app happens to
+     * arm the timer via MIDI playback.  No-op on HW-mixer builds. */
+    of_os_timer_boot_arm();
+    os_textguard_check("after of_init");
+
+    /* Boot stage: green logo = HAL ready */
+    boot_logo("\033[92m");  /* green */
+
+    of_term_puts("  HAL init.......... ");
+    status_ok();
+
+
+    /* Disk backend banner: SD = production (green), UART = service
+     * host attached (yellow), none = file I/O will fail (red).
+     * Labels are left-aligned with the OK / FAIL column above and
+     * pointer-compared so renames don't break the colour. */
+    {
+        const of_disk_driver_t *active = of_disk_active();
+        const char *colour = "\033[91m";
+        const char *label  = "none";
+        if (active == &of_disk_bridge) {
+            colour = "\033[92m";
+            label  = "SD";
+        } else if (active == &of_disk_boot) {
+            colour = "\033[93m";
+            label  = "UART";
+        }
+        of_term_printf("  Disk backend......  %s%s\033[0m\n", colour, label);
+    }
+
+    /* Initialize syscall subsystem */
+    uintptr_t heap_start = ((uintptr_t)__os_bss_end + 15) & ~15;
+    syscall_init(heap_start);
+    os_textguard_check("after syscall_init");
+
+    of_term_puts("  Syscall init...... ");
+    status_ok();
+
+    /* MiSTer F-load instance model: the OSD/MGL F-loads a menu-picked .ini
+     * into SDRAM staging, and that becomes this boot's os.ini (slot 2 is
+     * served from staging while HPS_STATUS_INI_LOADED is set — see
+     * targets/mister/file.c).  The mounted S0 .vhd is the shared family
+     * (wads under /assets, /app.elf, /bank.ofsf); the pushed ini selects the
+     * game.  Wait for that selection before loading the config and launching;
+     * if one is already staged we fall straight through.  Gated on
+     * OF_TARGET_SUPPORTS_RELAUNCH so Pocket/sim (no HPS_STATUS) are wholly
+     * unaffected — of_file_instance_ready() is a no-op '1' there and this
+     * block is not compiled at all. */
+#ifdef OF_TARGET_SUPPORTS_RELAUNCH
+    if (!of_file_instance_ready()) {
+        /* Recolor the logo blue (awaiting input) without disturbing the
+         * status lines already printed below it — same save/restore idiom the
+         * blue "launching" redraw uses further down. */
+        int saved_col, saved_row;
+        of_term_get_pos(&saved_col, &saved_row);
+        boot_logo("\033[94m");
+        of_term_set_pos(saved_col, saved_row);
+        /* Not an instruction to the user: on the normal path a .mgl launcher
+         * F-loads the ini automatically (~4 s in, well inside the 8 s wait
+         * below), so telling them to "select from the menu" describes an
+         * action they neither need nor can usefully take from here — the
+         * core's own OSD is the wrong place to pick an instance. */
+        of_term_puts("  Waiting for game...\n");
+        /* Bounded wait so a plain core load (or a misconfigured MGL that never
+         * F-loads a nonzero-index ini) can't hang here forever: after the
+         * timeout, fall through to of_config_load, which serves the mounted
+         * vhd's own /os.ini (the family default) — a graceful default boot
+         * instead of a silent hang.  An MGL F-loads its ini ~1-2 s after boot,
+         * far inside this window, so the selected game always wins. */
+        unsigned waited_ms = 0u;
+        BOOT_STAMP(0xB0070001u, 0u);
+        while (!of_file_instance_ready() && waited_ms < 8000u) {
+            of_timer_delay_ms(100);
+            waited_ms += 100u;
+        }
+        BOOT_STAMP(0xB0070002u,
+                   ((uint32_t)of_file_instance_ready() << 31) | waited_ms);
+    }
+#endif
+
+    of_term_puts("  Config init....... ");
+    int config_rc = of_config_load(OS_CONFIG_SLOT_ID);
+    if (config_rc < 0) {
+        status_fail();
+        of_term_printf("  os.ini rc=%d", config_rc);
+        if (of_config_error_line() > 0)
+            of_term_printf(" line=%d", of_config_error_line());
+        of_term_putchar('\n');
+        BOOT_STAMP(0xB007E003u, (uint32_t)config_rc);
+        of_video_console_reveal();
+        while (1) of_timer_delay_ms(1000);
+    }
+    status_ok();
+    BOOT_STAMP(0xB0070003u, 0u);
+
+#ifdef OF_TARGET_SUPPORTS_RELAUNCH
+    /* Derive the two roots (common_root / instance_root) from the loaded
+     * os.ini's [os] GAME/INSTANCE before resolving app.elf or any save/config
+     * path.  Absent keys clear both roots (legacy root-relative layout). */
+    os_apply_instance_roots();
+#endif
+
+    /* Brief pause to show banner */
+    of_timer_delay_ms(800);
+    os_textguard_check("after config_load");
+
+    /* Load application ELF */
+#ifdef OF_TARGET_SUPPORTS_RELAUNCH
+    /* Bring-up diagnostic (MiSTer only), OFF by default: did the MGL/RTL
+     * index-2 F-load actually stage an app.elf?  elf_fload=1 len=N confirms the
+     * staged engine reached the SoC and this boot reads it via APP_SLOT_ID ->
+     * elf_slot_read; elf_fload=0 means the F-load never fired — look upstream
+     * (CONF_STR / MGL / RTL), not at this routing.
+     * Silenced 2026-08-09: the F-load path is proven in the field, and this was
+     * the only bracketed debug line users saw on the MiSTer boot screen.  Build
+     * with -DOF_DEBUG_ELF_FLOAD to bring it back.  Compiled out on Pocket/sim
+     * either way, so their boot output is unchanged. */
+#ifdef OF_DEBUG_ELF_FLOAD
+    of_term_printf("  [elf_fload=%d len=%u]\n",
+                   of_file_app_from_staging(),
+                   (unsigned)of_file_app_staging_len());
+#endif
+#endif
+    of_term_puts("  Loading app....... ");
+
+    elf_load_result_t app;
+    uint32_t app_slot = APP_SLOT_ID;
+    int app_argc = 1;
+    os_textguard_check("before app load");
+#ifdef OF_TARGET_SUPPORTS_RELAUNCH
+    BOOT_STAMP(0xB0070004u,
+               of_file_app_from_staging()
+                   ? (0x80000000u | (uint32_t)of_file_app_staging_len())
+                   : 0u);
+#else
+    BOOT_STAMP(0xB0070004u, 0u);
+#endif
+    int rc = prepare_app_launch(&app_slot, &app_argc);
+    if (rc == 0)
+        rc = load_app_with_retries(app_slot, &app);
+    os_textguard_check("after app load");
+
+    if (rc < 0) {
+        status_fail();
+        BOOT_STAMP(0xB007E005u, (uint32_t)rc);
+        of_term_printf("  rc=%d\n", rc);
+        of_term_printf("  \033[93mNo application found: %s\033[0m\n\n",
+                       app_elf_name);
+        of_term_puts("  Place .elf in data slot 3\n");
+        of_term_puts("  or set [os] ELF in os.ini\n");
+        of_term_puts("  and press START to retry.\n");
+        of_video_console_reveal();
+
+        while (1) {
+            of_input_poll();
+            if (of_input_is_pressed(0, OF_BTN_START)) {
+                of_term_puts("\n  Retrying...");
+                rc = prepare_app_launch(&app_slot, &app_argc);
+                if (rc == 0)
+                    rc = load_app_with_retries(app_slot, &app);
+                if (rc == 0)
+                    break;
+                of_term_printf(" rc=%d\n", rc);
+                status_fail();
+            }
+        }
+    }
+
+    status_ok();
+
+    /* Heap in SDRAM after app's BSS (app is loaded at 0x10400000+) */
+    syscall_init(app.bss_end);
+
+    /* Apps statically link musl and emit Linux syscalls via ecall.
+     * The kernel's linux_dispatch() in syscall.c handles them; no
+     * libc jump table is needed any more. */
+
+    /* Populate OS services table first -- caps_table.c reads its
+     * address to fill the legacy caps->services_table field. */
+    services_table_init();
+
+    of_term_puts("  Services init..... ");
+    status_ok();
+
+    uintptr_t audio_floor = (app.bss_end + APP_STACK_SIZE
+                           + OF_TARGET_AUDIO_RESERVE_ALIGN - 1u)
+                          & ~(uintptr_t)(OF_TARGET_AUDIO_RESERVE_ALIGN - 1u);
+    if (of_mixer_memory_set_floor((uint32_t)audio_floor) < 0) {
+        of_term_puts("  App memory........ ");
+        status_fail();
+        of_term_puts("  Application is too large for the audio reserve layout.\n");
+        while (1) of_timer_delay_ms(1000);
+    }
+
+    /* Filesystem init — last step before handing control to the app.
+     * Opens every data slot (required for deferload:true) and populates
+     * the filename→slot map so apps can fopen() by name. */
+    of_term_puts("  Filesystem init... ");
+    int fs_slots = filesystem_init();
+    of_term_printf(" \033[92m%d slot%s\033[0m\n",
+                   fs_slots, fs_slots == 1 ? "" : "s");
+
+    /* Auto-load a .ofsf SoundFont if one is present in a data slot.
+     * Silent when no bank is staged; emits its own boot line otherwise. */
+    bank_preload();
+
+    app.stack_top = of_mixer_app_memory_top();
+    if (syscall_set_app_stack_top(app.stack_top) < 0) {
+        of_term_puts("  App memory........ ");
+        status_fail();
+        of_term_puts("  Not enough SDRAM for app stack after audio reservations.\n");
+        while (1) of_timer_delay_ms(1000);
+    }
+
+    /* Populate capability descriptor after audio/SoundFont reservations
+     * so heap_size and sample_base/sample_size describe the real layout. */
+    caps_table_init(app.bss_end);
+
+    of_term_puts("  Caps init......... ");
+    status_ok();
+
+    /* UART shares cart pins with Analogizer/SNAC. Only mirror the boot console
+     * when neither feature owns the adapter pins, and only after the SoundFont
+     * preload has finished probing/loading staged files. */
+    {
+        const of_analogizer_state_t *analogizer_state = of_analogizer_get_state();
+        if (!analogizer_state->enabled &&
+            analogizer_state->snac_type == SNAC_NONE)
+            of_term_enable_uart_mirror();
+    }
+
+    of_timer_delay_ms(300);
+
+    /* Boot stage: blue logo = launching app. Save/restore cursor so
+     * the redraw (which jumps to 0,0) doesn't leave the cursor inside
+     * the logo -- otherwise the app's first writes overwrite the
+     * status messages below it. */
+    {
+        int saved_col, saved_row;
+        of_term_get_pos(&saved_col, &saved_row);
+        boot_logo("\033[94m");  /* blue */
+        of_term_set_pos(saved_col, saved_row);
+    }
+    of_timer_delay_ms(200);
+
+    /* Boot is done — every init/probe sector op above ran fail-fast.
+     * From here on the target may treat transport timeouts as transient
+     * (MiSTer: DS ERR_TIMEOUT while the user sits in the OSD is retried
+     * instead of failing the app's read).  See hal/file.h. */
+    of_file_boot_complete();
+
+    /* Execute the app */
+    os_textguard_check("before elf_exec");
+    BOOT_STAMP(0xB0070006u, app_slot);
+    elf_exec(&app, app_argc, app_argv);
+
+    /* Should never reach here */
+    while (1) {}
+}
+
+#ifdef OF_TARGET_SUPPORTS_RELAUNCH
+/* ======================================================================
+ * In-OS application relaunch (Architecture A) — see kernel/launch.h.
+ *
+ * A launcher app (menu.elf) selects an instance and ecalls OF_BASE_FID_
+ * RELAUNCH; the kernel tears down the outgoing app, re-points the file
+ * system at the instance, re-reads its os.ini, and execs the chosen ELF —
+ * all without resetting the FPGA.  MiSTer only (saves are write-through FAT
+ * files; one bitstream runs every instance).
+ * ====================================================================== */
+
+#define RELAUNCH_INSTANCE_MAX 64
+
+/* Captured out of the caller's memory before any teardown (the app's strings
+ * disappear once the next ELF is loaded over it). */
+static char relaunch_instance[RELAUNCH_INSTANCE_MAX];
+static char relaunch_elf[APP_ELF_NAME_MAX];
+static int  relaunch_elf_set;
+
+/* Launcher to re-enter when the running app exit()s (os_set_menu). */
+static char menu_instance[RELAUNCH_INSTANCE_MAX];
+static char menu_elf[APP_ELF_NAME_MAX];
+static int  menu_set;
+
+static void launch_str_copy(char *dst, uint32_t dst_sz, const char *src) {
+    uint32_t i = 0;
+    if (src)
+        for (; src[i] && i < dst_sz - 1u; i++)
+            dst[i] = src[i];
+    dst[i] = '\0';
+}
+
+void os_request_relaunch(const char *instance, const char *elf) {
+    launch_str_copy(relaunch_instance, sizeof(relaunch_instance), instance);
+    relaunch_elf_set = (elf && elf[0]) ? 1 : 0;
+    launch_str_copy(relaunch_elf, sizeof(relaunch_elf),
+                    relaunch_elf_set ? elf : "");
+}
+
+void os_set_menu(const char *instance, const char *elf) {
+    launch_str_copy(menu_instance, sizeof(menu_instance), instance);
+    launch_str_copy(menu_elf, sizeof(menu_elf), elf);
+    menu_set = (menu_instance[0] || menu_elf[0]) ? 1 : 0;
+}
+
+int os_menu_pending(void) { return menu_set; }
+
+void os_request_menu_relaunch(void) {
+    os_request_relaunch(menu_instance, menu_elf);
+}
+
+/* menu_set intentionally PERSISTS across relaunches: once a launcher registers,
+ * every subsequent game exit must return to it, so os_relaunch() must NOT clear
+ * it.  The launcher re-arms it on each entry; it never exit()s itself. */
+
+static void relaunch_fail(const char *what, int rc) {
+    /* Reached only on an unrecoverable relaunch error -> halt forever.  Keep
+     * interrupts disabled so a timer/vsync IRQ can't fire into the now-stale
+     * trap frame while we spin (os_relaunch may have already re-enabled them). */
+    __asm__ volatile("csrci mstatus, 0x8" ::: "memory");
+    BOOT_STAMP(0xB007E00Fu, (uint32_t)rc);
+    of_term_printf("  \033[91mrelaunch: %s (rc=%d)\033[0m\n", what, rc);
+    of_video_console_reveal();
+    while (1)
+        of_timer_delay_ms(1000);
+}
+
+void os_relaunch(void) {
+    /* We run in the M-mode ecall trap handler, on the OS runtime stack (never
+     * the outgoing app's stack), with interrupts globally disabled — so the
+     * teardown below races nothing.  We never mret: exactly like the cold-boot
+     * elf_exec(), we jr straight into the next app once it is loaded. */
+
+    /* Drop the outgoing app's IRQ callbacks and source masks. */
+    of_irq_init();
+
+    /* Quiesce the dynamic HW the app may have dirtied.  Per the of_init()
+     * idempotency audit, re-running of_init() is safe ONLY after these — it
+     * does not stop voices, release sample allocations, or close file handles
+     * itself, so doing so here prevents leaked voices/allocs/FILs. */
+    of_mixer_stop_all();
+    of_mixer_free_samples();
+    of_file_relaunch_reset();
+
+    /* Re-point the file system at the selected instance (no-op when empty). */
+    of_file_set_instance_root(relaunch_instance);
+
+    /* Re-init the HAL to a clean state for the next app.  Interrupts stay
+     * globally disabled through all of the fallible setup below: of_irq_enable_
+     * cpu() is deferred to just before the hand-off so a relaunch_fail() halt
+     * can never spin with IRQs live against the stale ecall trap frame. */
+    of_init();
+
+    logo_drawn = 0;
+    boot_logo("\033[94m");           /* blue: launching */
+    of_term_puts("  Relaunching...\n");
+
+    /* Load the selected instance's os.ini (slot 2 resolves under the instance
+     * root on MiSTer).  Missing/empty falls back to defaults. */
+    (void)of_config_load(OS_CONFIG_SLOT_ID);
+
+    /* Re-derive both roots from the freshly loaded os.ini's [os] GAME/INSTANCE
+     * so every read (app.elf/bank) and write (config/save) resolves against
+     * the relaunched instance.  Absent keys clear them (legacy layout). */
+    os_apply_instance_roots();
+
+    /* Capture and clear the one-shot ELF override up front, so it never leaks
+     * into a later relaunch regardless of which path we take from here. */
+    const char *elf_override = relaunch_elf_set ? relaunch_elf : NULL;
+    relaunch_elf_set = 0;
+
+    elf_load_result_t app;
+    uint32_t app_slot = APP_SLOT_ID;
+    int app_argc = 1;
+    int rc = prepare_app_launch_ex(elf_override, &app_slot, &app_argc);
+    if (rc == 0)
+        rc = load_app_with_retries(app_slot, &app);
+    if (rc < 0)
+        relaunch_fail(app_elf_name, rc);
+
+    /* Per-app kernel state — mirrors the os_main() launch tail; keep in sync. */
+    syscall_init(app.bss_end);
+    services_table_init();
+
+    uintptr_t audio_floor = (app.bss_end + APP_STACK_SIZE
+                           + OF_TARGET_AUDIO_RESERVE_ALIGN - 1u)
+                          & ~(uintptr_t)(OF_TARGET_AUDIO_RESERVE_ALIGN - 1u);
+    if (of_mixer_memory_set_floor((uint32_t)audio_floor) < 0)
+        relaunch_fail("app too large for audio reserve", 0);
+
+    filesystem_init();
+    bank_preload();
+
+    app.stack_top = of_mixer_app_memory_top();
+    if (syscall_set_app_stack_top(app.stack_top) < 0)
+        relaunch_fail("not enough SDRAM for app stack", 0);
+
+    caps_table_init(app.bss_end);
+
+    /* Mirror the boot console to UART only when neither Analogizer nor SNAC
+     * owns the shared cart pins — same gate os_main() applies at cold boot. */
+    {
+        const of_analogizer_state_t *az = of_analogizer_get_state();
+        if (!az->enabled && az->snac_type == SNAC_NONE)
+            of_term_enable_uart_mirror();
+    }
+
+    /* of_input_init() (run inside of_init) zeroed prev_buttons; prime it so the
+     * new app's first poll sees correct press edges, not every held button. */
+    of_input_poll();
+
+    /* All fallible setup done — safe to take interrupts now, then hand off. */
+    of_irq_enable_cpu();
+    elf_exec(&app, app_argc, app_argv);
+    while (1) {}  /* unreachable */
+}
+#endif /* OF_TARGET_SUPPORTS_RELAUNCH */

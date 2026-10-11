@@ -1,0 +1,94 @@
+//------------------------------------------------------------------------------
+// SPDX-License-Identifier: Apache-2.0
+// SPDX-FileType: SOURCE
+// SPDX-FileCopyrightText: (c) 2026, ThinkElastic <Think@Elastic.com>
+//------------------------------------------------------------------------------
+
+/*
+ * openfpgaOS Capability Descriptor Table
+ *
+ * Populates a static of_capabilities struct in kernel BSS during boot
+ * and exposes it via caps_table_get(). The pointer is handed to apps
+ * through the AT_OF_CAPS auxv tag in elf_exec(), so an app never has
+ * to know where the struct lives -- it just calls of_get_caps() (which
+ * returns the auxv-supplied pointer) and reads it like any other
+ * read-only blob.
+ *
+ * The struct is plain BSS in the OS .data region, so it ends up in
+ * CRAM0 alongside the rest of the kernel. Apps read it through the
+ * cached path; the kernel writes it once at boot and never touches
+ * it again, so there's no coherency concern.
+ */
+
+#include "caps_table.h"
+#include "services_table.h"
+#include "syscall.h"
+#include "of_caps.h"
+#include "of_services.h"
+#include "of_version.h"
+#include "../hal/regs.h"
+#include "../hal/mixer.h"
+
+/* Single source of truth for the app-visible cap struct. Lives in BSS
+ * (zero-initialized at boot), populated by caps_table_init(). */
+static struct of_capabilities g_caps;
+
+void caps_table_init(uintptr_t heap_base) {
+    const of_target_platform_t *platform = of_target_platform_get();
+    struct of_capabilities *caps = &g_caps;
+    uint32_t features = HW_FEATURES;
+
+    caps->magic   = OF_CAPS_MAGIC;
+    caps->version = OF_CAPS_VERSION;
+    /* This OS decodes the dock's packed mouse sample pairs to counts
+     * (hal/hid_mouse.c HID_MOUSE_XY_PAIR8); advertise so apps skip
+     * their raw-pair fallback decode. */
+    caps->os_features = OF_OS_FEAT_MOUSE_COUNTS;
+
+    /* Memory regions */
+    caps->heap_base   = (uint32_t)heap_base;
+    uintptr_t heap_limit = of_brk_limit();
+    caps->heap_size   = heap_limit > heap_base
+                      ? (uint32_t)(heap_limit - heap_base)
+                      : 0;
+    caps->fb_base     = platform->fb_bases[0];
+    caps->fb_size     = FB_SIZE;
+    caps->fb_width    = platform->fb_width;
+    caps->fb_height   = platform->fb_height;
+    caps->fb_stride   = platform->fb_stride;
+    caps->sample_base = of_mixer_reserved_base();
+    caps->sample_size = of_mixer_reserved_size();
+
+    /* Hardware features — read from RTL register (single source of truth) */
+    caps->hw_features   = features;
+    caps->mixer_voices  = (features & HW_FEAT_MIXER) ? 32u : 0u;
+    caps->mixer_rate    = (features & HW_FEAT_MIXER) ? 48000u : 0u;
+
+    /* Platform identity */
+    caps->platform_id   = platform->platform_id;
+    caps->core_variant  = 0;    /* default variant */
+    caps->sdram_size    = platform->sdram_size;
+    caps->cram_size     = platform->cram_size;
+
+    /* OS info */
+    caps->os_version      = OF_API_VERSION;
+    /* Live value (g_cpu_freq_hz), not the platform descriptor's compile-time
+     * constant — reduced-clock bitstreams (the 96 MHz os20) advertise their real
+     * frequency at boot and apps must see it. */
+    caps->cpu_freq_hz     = CPU_FREQ_HZ;
+    /* v2 fields: memory bases for inline accessors that previously
+     * baked the addresses into every app .elf. */
+    caps->sdram_base          = platform->sdram_base;
+    caps->sdram_uncached_base = platform->sdram_uncached_base;
+    caps->gpu_base            = (features & HW_FEAT_GPU_SPAN) ? platform->gpu_base : 0u;
+    /* Fast texture memory (CRAM1) only when the bitstream advertises it
+     * (Pocket OS30).  OS25 gates the CRAM1 controller out and clears the
+     * bit → tex_fast_size 0 → of_texture.h keeps textures + colormap in
+     * SDRAM. */
+    caps->tex_fast_size       = (features & HW_FEAT_GPU_FAST_TEX)
+                              ? platform->tex_fast_size : 0u;
+}
+
+const struct of_capabilities *caps_table_get(void) {
+    return &g_caps;
+}

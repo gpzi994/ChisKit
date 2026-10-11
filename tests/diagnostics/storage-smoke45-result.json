@@ -1,0 +1,39 @@
+{
+  "test": "smoke.45 initial slot binding A/B control",
+  "pocket_firmware_user_reported": "V2.6",
+  "cases": [
+    {
+      "instance": "TF Flush A45 Unbound",
+      "os_slot1": 137480,
+      "slot4_pre": -1,
+      "slot4_post": 1048613,
+      "open_rc": 0,
+      "flush_rc": -12,
+      "timeout_counter": 40,
+      "timeout_trace": "DF3F1C60"
+    },
+    {
+      "instance": "TF Flush B45 Bound",
+      "os_slot1": 137480,
+      "slot4_pre": 64,
+      "slot4_post": 1048613,
+      "open_rc": 0,
+      "flush_rc": -12,
+      "timeout_counter": 40,
+      "timeout_trace": "DF3F1C60"
+    }
+  ],
+  "post_values_source": "User follow-up: a45 slot4 post 1048613, b45 1048613",
+  "supported_conclusions": [
+    "The initial 64-byte slot 4 binding took effect in B",
+    "SDK CPU-side slot 4 lookup reports the requested size after OPEN in both cases",
+    "Initial binding alone does not resolve FLUSH",
+    "Both traces show core-side command and slot-address reads, but no target status write"
+  ],
+  "not_established": [
+    "The exact slot parameter and datatable values received by the physical host",
+    "Whether the host reads the datatable during the failing FLUSH",
+    "Whether a host response was attempted but lost before core_bridge_cmd"
+  ],
+  "hardware_flush_fixed": false
+}

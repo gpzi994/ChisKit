@@ -1,0 +1,1793 @@
+Archive member included to satisfy reference by file (symbol)
+
+/usr/lib/gcc/riscv64-unknown-elf/13.2.0/rv32imafc/ilp32f/libgcc.a(_lshrdi3.o)
+                              bld/gb-rtcrelease001b/api/of_smp_tables.o (__lshrdi3)
+/usr/lib/gcc/riscv64-unknown-elf/13.2.0/rv32imafc/ilp32f/libgcc.a(_divdi3.o)
+                              bld/gb-rtcrelease001b/api/of_smp_tables.o (__divdi3)
+/usr/lib/gcc/riscv64-unknown-elf/13.2.0/rv32imafc/ilp32f/libgcc.a(_udivdi3.o)
+                              bld/gb-rtcrelease001b/api/of_smp_tables.o (__udivdi3)
+/usr/lib/gcc/riscv64-unknown-elf/13.2.0/rv32imafc/ilp32f/libgcc.a(_clz.o)
+                              /usr/lib/gcc/riscv64-unknown-elf/13.2.0/rv32imafc/ilp32f/libgcc.a(_divdi3.o) (__clz_tab)
+../musl/lib/libc.a(fprintf.o)
+                              bld/gb-rtcrelease001b/kernel/of_malloc.o (symbol from plugin) (fprintf)
+../musl/lib/libc.a(snprintf.o)
+                              bld/gb-rtcrelease001b/nor108/mori/chisburner_nor_db_lookup.o (symbol from plugin) (snprintf)
+../musl/lib/libc.a(stderr.o)  bld/gb-rtcrelease001b/kernel/of_malloc.o (symbol from plugin) (stderr)
+../musl/lib/libc.a(vfprintf.o)
+                              ../musl/lib/libc.a(fprintf.o) (vfprintf)
+../musl/lib/libc.a(vsnprintf.o)
+                              ../musl/lib/libc.a(snprintf.o) (vsnprintf)
+../musl/lib/libc.a(memcmp.o)  bld/gb-rtcrelease001b/lib/iso9660/lib9660.o (symbol from plugin) (memcmp)
+../musl/lib/libc.a(strcmp.o)  bld/gb-rtcrelease001b/targets/pocket/file.o (symbol from plugin) (strcmp)
+../musl/lib/libc.a(strncmp.o)
+                              bld/gb-rtcrelease001b/targets/pocket/file.o (symbol from plugin) (strncmp)
+../musl/lib/libc.a(strncpy.o)
+                              bld/gb-rtcrelease001b/kernel/main.o (symbol from plugin) (strncpy)
+../musl/lib/libc.a(strnlen.o)
+                              ../musl/lib/libc.a(vfprintf.o) (strnlen)
+../musl/lib/libc.a(__errno_location.o)
+                              ../musl/lib/libc.a(vfprintf.o) (___errno_location)
+../musl/lib/libc.a(strerror.o)
+                              ../musl/lib/libc.a(vfprintf.o) (strerror)
+../musl/lib/libc.a(__lctrans.o)
+                              ../musl/lib/libc.a(strerror.o) (__lctrans)
+../musl/lib/libc.a(__fpclassifyl.o)
+                              ../musl/lib/libc.a(vfprintf.o) (__fpclassifyl)
+../musl/lib/libc.a(__signbitl.o)
+                              ../musl/lib/libc.a(vfprintf.o) (__signbitl)
+../musl/lib/libc.a(frexpl.o)  ../musl/lib/libc.a(vfprintf.o) (frexpl)
+../musl/lib/libc.a(wctomb.o)  ../musl/lib/libc.a(vfprintf.o) (wctomb)
+../musl/lib/libc.a(__lockfile.o)
+                              ../musl/lib/libc.a(vfprintf.o) (__lockfile)
+../musl/lib/libc.a(__stdio_close.o)
+                              ../musl/lib/libc.a(stderr.o) (__stdio_close)
+../musl/lib/libc.a(__stdio_seek.o)
+                              ../musl/lib/libc.a(stderr.o) (__stdio_seek)
+../musl/lib/libc.a(__stdio_write.o)
+                              ../musl/lib/libc.a(stderr.o) (__stdio_write)
+../musl/lib/libc.a(__towrite.o)
+                              ../musl/lib/libc.a(vfprintf.o) (__towrite)
+../musl/lib/libc.a(fwrite.o)  ../musl/lib/libc.a(vfprintf.o) (__fwritex)
+../musl/lib/libc.a(memchr.o)  ../musl/lib/libc.a(strnlen.o) (memchr)
+../musl/lib/libc.a(stpncpy.o)
+                              ../musl/lib/libc.a(strncpy.o) (__stpncpy)
+../musl/lib/libc.a(lseek.o)   ../musl/lib/libc.a(__stdio_seek.o) (__lseek)
+../musl/lib/libc.a(syscall_ret.o)
+                              ../musl/lib/libc.a(__stdio_close.o) (__syscall_ret)
+../musl/lib/libc.a(wcrtomb.o)
+                              ../musl/lib/libc.a(wctomb.o) (wcrtomb)
+../musl/lib/libc.a(__stdio_exit.o)
+                              ../musl/lib/libc.a(__towrite.o) (__stdio_exit_needed)
+../musl/lib/libc.a(ofl.o)     ../musl/lib/libc.a(__stdio_exit.o) (__ofl_lock)
+../musl/lib/libc.a(__lock.o)  ../musl/lib/libc.a(ofl.o) (__lock)
+../musl/lib/libc.a(libc.o)    ../musl/lib/libc.a(__lock.o) (__libc)
+/usr/lib/gcc/riscv64-unknown-elf/13.2.0/rv32imafc/ilp32f/libgcc.a(_ashldi3.o)
+                              /tmp/ccCBZpdZ.ltrans2.ltrans.o (__ashldi3)
+/usr/lib/gcc/riscv64-unknown-elf/13.2.0/rv32imafc/ilp32f/libgcc.a(_moddi3.o)
+                              /tmp/ccCBZpdZ.ltrans1.ltrans.o (__moddi3)
+/usr/lib/gcc/riscv64-unknown-elf/13.2.0/rv32imafc/ilp32f/libgcc.a(_umoddi3.o)
+                              ../musl/lib/libc.a(vfprintf.o) (__umoddi3)
+/usr/lib/gcc/riscv64-unknown-elf/13.2.0/rv32imafc/ilp32f/libgcc.a(addtf3.o)
+                              ../musl/lib/libc.a(vfprintf.o) (__addtf3)
+/usr/lib/gcc/riscv64-unknown-elf/13.2.0/rv32imafc/ilp32f/libgcc.a(eqtf2.o)
+                              ../musl/lib/libc.a(vfprintf.o) (__netf2)
+/usr/lib/gcc/riscv64-unknown-elf/13.2.0/rv32imafc/ilp32f/libgcc.a(multf3.o)
+                              ../musl/lib/libc.a(vfprintf.o) (__multf3)
+/usr/lib/gcc/riscv64-unknown-elf/13.2.0/rv32imafc/ilp32f/libgcc.a(subtf3.o)
+                              ../musl/lib/libc.a(vfprintf.o) (__subtf3)
+/usr/lib/gcc/riscv64-unknown-elf/13.2.0/rv32imafc/ilp32f/libgcc.a(fixtfsi.o)
+                              ../musl/lib/libc.a(vfprintf.o) (__fixtfsi)
+/usr/lib/gcc/riscv64-unknown-elf/13.2.0/rv32imafc/ilp32f/libgcc.a(fixunstfsi.o)
+                              ../musl/lib/libc.a(vfprintf.o) (__fixunstfsi)
+/usr/lib/gcc/riscv64-unknown-elf/13.2.0/rv32imafc/ilp32f/libgcc.a(floatsitf.o)
+                              ../musl/lib/libc.a(vfprintf.o) (__floatsitf)
+/usr/lib/gcc/riscv64-unknown-elf/13.2.0/rv32imafc/ilp32f/libgcc.a(floatunsitf.o)
+                              ../musl/lib/libc.a(vfprintf.o) (__floatunsitf)
+/usr/lib/gcc/riscv64-unknown-elf/13.2.0/rv32imafc/ilp32f/libgcc.a(extenddftf2.o)
+                              ../musl/lib/libc.a(vfprintf.o) (__extenddftf2)
+/usr/lib/gcc/riscv64-unknown-elf/13.2.0/rv32imafc/ilp32f/libgcc.a(_clzsi2.o)
+                              /usr/lib/gcc/riscv64-unknown-elf/13.2.0/rv32imafc/ilp32f/libgcc.a(addtf3.o) (__clzsi2)
+
+Discarded input sections
+
+ .data          0x00000000        0x0 bld/gb-rtcrelease001b/targets/pocket/boot/boot.o
+ .bss           0x00000000        0x0 bld/gb-rtcrelease001b/targets/pocket/boot/boot.o
+ .data          0x00000000        0x0 /tmp/ccCBZpdZ.ltrans0.ltrans.o
+ .data          0x00000000        0x0 /tmp/ccCBZpdZ.ltrans2.ltrans.o
+ .data          0x00000000        0x0 /tmp/ccCBZpdZ.ltrans3.ltrans.o
+ .data          0x00000000        0x0 bld/gb-rtcrelease001b/api/of_smp_tables.o
+ .bss           0x00000000        0x0 bld/gb-rtcrelease001b/api/of_smp_tables.o
+ .data          0x00000000        0x0 bld/gb-rtcrelease001b/kernel/syscall.o
+ .bss           0x00000000        0x0 bld/gb-rtcrelease001b/kernel/syscall.o
+ .data          0x00000000        0x0 bld/gb-rtcrelease001b/kernel/irq.o
+ .bss           0x00000000        0x0 bld/gb-rtcrelease001b/kernel/irq.o
+ .data          0x00000000        0x0 bld/gb-rtcrelease001b/targets/pocket/boot/start.o
+ .bss           0x00000000        0x0 bld/gb-rtcrelease001b/targets/pocket/boot/start.o
+ .data          0x00000000        0x0 bld/gb-rtcrelease001b/hal/fast_mem.o
+ .bss           0x00000000        0x0 bld/gb-rtcrelease001b/hal/fast_mem.o
+ .data          0x00000000        0x0 /usr/lib/gcc/riscv64-unknown-elf/13.2.0/rv32imafc/ilp32f/libgcc.a(_lshrdi3.o)
+ .bss           0x00000000        0x0 /usr/lib/gcc/riscv64-unknown-elf/13.2.0/rv32imafc/ilp32f/libgcc.a(_lshrdi3.o)
+ .data          0x00000000        0x0 /usr/lib/gcc/riscv64-unknown-elf/13.2.0/rv32imafc/ilp32f/libgcc.a(_divdi3.o)
+ .bss           0x00000000        0x0 /usr/lib/gcc/riscv64-unknown-elf/13.2.0/rv32imafc/ilp32f/libgcc.a(_divdi3.o)
+ .eh_frame      0x00000000       0x28 /usr/lib/gcc/riscv64-unknown-elf/13.2.0/rv32imafc/ilp32f/libgcc.a(_divdi3.o)
+ .data          0x00000000        0x0 /usr/lib/gcc/riscv64-unknown-elf/13.2.0/rv32imafc/ilp32f/libgcc.a(_udivdi3.o)
+ .bss           0x00000000        0x0 /usr/lib/gcc/riscv64-unknown-elf/13.2.0/rv32imafc/ilp32f/libgcc.a(_udivdi3.o)
+ .eh_frame      0x00000000       0x28 /usr/lib/gcc/riscv64-unknown-elf/13.2.0/rv32imafc/ilp32f/libgcc.a(_udivdi3.o)
+ .data          0x00000000        0x0 /usr/lib/gcc/riscv64-unknown-elf/13.2.0/rv32imafc/ilp32f/libgcc.a(_clz.o)
+ .bss           0x00000000        0x0 /usr/lib/gcc/riscv64-unknown-elf/13.2.0/rv32imafc/ilp32f/libgcc.a(_clz.o)
+ .data          0x00000000        0x0 /usr/lib/gcc/riscv64-unknown-elf/13.2.0/rv32imafc/ilp32f/libgcc.a(_ashldi3.o)
+ .bss           0x00000000        0x0 /usr/lib/gcc/riscv64-unknown-elf/13.2.0/rv32imafc/ilp32f/libgcc.a(_ashldi3.o)
+ .data          0x00000000        0x0 /usr/lib/gcc/riscv64-unknown-elf/13.2.0/rv32imafc/ilp32f/libgcc.a(_moddi3.o)
+ .bss           0x00000000        0x0 /usr/lib/gcc/riscv64-unknown-elf/13.2.0/rv32imafc/ilp32f/libgcc.a(_moddi3.o)
+ .eh_frame      0x00000000       0x28 /usr/lib/gcc/riscv64-unknown-elf/13.2.0/rv32imafc/ilp32f/libgcc.a(_moddi3.o)
+ .data          0x00000000        0x0 /usr/lib/gcc/riscv64-unknown-elf/13.2.0/rv32imafc/ilp32f/libgcc.a(_umoddi3.o)
+ .bss           0x00000000        0x0 /usr/lib/gcc/riscv64-unknown-elf/13.2.0/rv32imafc/ilp32f/libgcc.a(_umoddi3.o)
+ .eh_frame      0x00000000       0x28 /usr/lib/gcc/riscv64-unknown-elf/13.2.0/rv32imafc/ilp32f/libgcc.a(_umoddi3.o)
+ .data          0x00000000        0x0 /usr/lib/gcc/riscv64-unknown-elf/13.2.0/rv32imafc/ilp32f/libgcc.a(addtf3.o)
+ .bss           0x00000000        0x0 /usr/lib/gcc/riscv64-unknown-elf/13.2.0/rv32imafc/ilp32f/libgcc.a(addtf3.o)
+ .data          0x00000000        0x0 /usr/lib/gcc/riscv64-unknown-elf/13.2.0/rv32imafc/ilp32f/libgcc.a(eqtf2.o)
+ .bss           0x00000000        0x0 /usr/lib/gcc/riscv64-unknown-elf/13.2.0/rv32imafc/ilp32f/libgcc.a(eqtf2.o)
+ .data          0x00000000        0x0 /usr/lib/gcc/riscv64-unknown-elf/13.2.0/rv32imafc/ilp32f/libgcc.a(multf3.o)
+ .bss           0x00000000        0x0 /usr/lib/gcc/riscv64-unknown-elf/13.2.0/rv32imafc/ilp32f/libgcc.a(multf3.o)
+ .data          0x00000000        0x0 /usr/lib/gcc/riscv64-unknown-elf/13.2.0/rv32imafc/ilp32f/libgcc.a(subtf3.o)
+ .bss           0x00000000        0x0 /usr/lib/gcc/riscv64-unknown-elf/13.2.0/rv32imafc/ilp32f/libgcc.a(subtf3.o)
+ .data          0x00000000        0x0 /usr/lib/gcc/riscv64-unknown-elf/13.2.0/rv32imafc/ilp32f/libgcc.a(fixtfsi.o)
+ .bss           0x00000000        0x0 /usr/lib/gcc/riscv64-unknown-elf/13.2.0/rv32imafc/ilp32f/libgcc.a(fixtfsi.o)
+ .data          0x00000000        0x0 /usr/lib/gcc/riscv64-unknown-elf/13.2.0/rv32imafc/ilp32f/libgcc.a(fixunstfsi.o)
+ .bss           0x00000000        0x0 /usr/lib/gcc/riscv64-unknown-elf/13.2.0/rv32imafc/ilp32f/libgcc.a(fixunstfsi.o)
+ .data          0x00000000        0x0 /usr/lib/gcc/riscv64-unknown-elf/13.2.0/rv32imafc/ilp32f/libgcc.a(floatsitf.o)
+ .bss           0x00000000        0x0 /usr/lib/gcc/riscv64-unknown-elf/13.2.0/rv32imafc/ilp32f/libgcc.a(floatsitf.o)
+ .data          0x00000000        0x0 /usr/lib/gcc/riscv64-unknown-elf/13.2.0/rv32imafc/ilp32f/libgcc.a(floatunsitf.o)
+ .bss           0x00000000        0x0 /usr/lib/gcc/riscv64-unknown-elf/13.2.0/rv32imafc/ilp32f/libgcc.a(floatunsitf.o)
+ .data          0x00000000        0x0 /usr/lib/gcc/riscv64-unknown-elf/13.2.0/rv32imafc/ilp32f/libgcc.a(extenddftf2.o)
+ .bss           0x00000000        0x0 /usr/lib/gcc/riscv64-unknown-elf/13.2.0/rv32imafc/ilp32f/libgcc.a(extenddftf2.o)
+ .data          0x00000000        0x0 /usr/lib/gcc/riscv64-unknown-elf/13.2.0/rv32imafc/ilp32f/libgcc.a(_clzsi2.o)
+ .bss           0x00000000        0x0 /usr/lib/gcc/riscv64-unknown-elf/13.2.0/rv32imafc/ilp32f/libgcc.a(_clzsi2.o)
+ .data          0x00000000        0x0 ../musl/lib/libc.a(fprintf.o)
+ .bss           0x00000000        0x0 ../musl/lib/libc.a(fprintf.o)
+ .data          0x00000000        0x0 ../musl/lib/libc.a(snprintf.o)
+ .bss           0x00000000        0x0 ../musl/lib/libc.a(snprintf.o)
+ .data          0x00000000        0x0 ../musl/lib/libc.a(stderr.o)
+ .bss           0x00000000        0x0 ../musl/lib/libc.a(stderr.o)
+ .data          0x00000000        0x0 ../musl/lib/libc.a(vfprintf.o)
+ .bss           0x00000000        0x0 ../musl/lib/libc.a(vfprintf.o)
+ .data          0x00000000        0x0 ../musl/lib/libc.a(vsnprintf.o)
+ .bss           0x00000000        0x0 ../musl/lib/libc.a(vsnprintf.o)
+ .data          0x00000000        0x0 ../musl/lib/libc.a(memcmp.o)
+ .bss           0x00000000        0x0 ../musl/lib/libc.a(memcmp.o)
+ .data          0x00000000        0x0 ../musl/lib/libc.a(strcmp.o)
+ .bss           0x00000000        0x0 ../musl/lib/libc.a(strcmp.o)
+ .data          0x00000000        0x0 ../musl/lib/libc.a(strncmp.o)
+ .bss           0x00000000        0x0 ../musl/lib/libc.a(strncmp.o)
+ .data          0x00000000        0x0 ../musl/lib/libc.a(strncpy.o)
+ .bss           0x00000000        0x0 ../musl/lib/libc.a(strncpy.o)
+ .data          0x00000000        0x0 ../musl/lib/libc.a(strnlen.o)
+ .bss           0x00000000        0x0 ../musl/lib/libc.a(strnlen.o)
+ .data          0x00000000        0x0 ../musl/lib/libc.a(__errno_location.o)
+ .bss           0x00000000        0x0 ../musl/lib/libc.a(__errno_location.o)
+ .data          0x00000000        0x0 ../musl/lib/libc.a(strerror.o)
+ .bss           0x00000000        0x0 ../musl/lib/libc.a(strerror.o)
+ .data          0x00000000        0x0 ../musl/lib/libc.a(__lctrans.o)
+ .bss           0x00000000        0x0 ../musl/lib/libc.a(__lctrans.o)
+ .data          0x00000000        0x0 ../musl/lib/libc.a(__fpclassifyl.o)
+ .bss           0x00000000        0x0 ../musl/lib/libc.a(__fpclassifyl.o)
+ .data          0x00000000        0x0 ../musl/lib/libc.a(__signbitl.o)
+ .bss           0x00000000        0x0 ../musl/lib/libc.a(__signbitl.o)
+ .data          0x00000000        0x0 ../musl/lib/libc.a(frexpl.o)
+ .bss           0x00000000        0x0 ../musl/lib/libc.a(frexpl.o)
+ .data          0x00000000        0x0 ../musl/lib/libc.a(wctomb.o)
+ .bss           0x00000000        0x0 ../musl/lib/libc.a(wctomb.o)
+ .data          0x00000000        0x0 ../musl/lib/libc.a(__lockfile.o)
+ .bss           0x00000000        0x0 ../musl/lib/libc.a(__lockfile.o)
+ .data          0x00000000        0x0 ../musl/lib/libc.a(__stdio_close.o)
+ .bss           0x00000000        0x0 ../musl/lib/libc.a(__stdio_close.o)
+ .data          0x00000000        0x0 ../musl/lib/libc.a(__stdio_seek.o)
+ .bss           0x00000000        0x0 ../musl/lib/libc.a(__stdio_seek.o)
+ .data          0x00000000        0x0 ../musl/lib/libc.a(__stdio_write.o)
+ .bss           0x00000000        0x0 ../musl/lib/libc.a(__stdio_write.o)
+ .data          0x00000000        0x0 ../musl/lib/libc.a(__towrite.o)
+ .bss           0x00000000        0x0 ../musl/lib/libc.a(__towrite.o)
+ .data          0x00000000        0x0 ../musl/lib/libc.a(fwrite.o)
+ .bss           0x00000000        0x0 ../musl/lib/libc.a(fwrite.o)
+ .data          0x00000000        0x0 ../musl/lib/libc.a(memchr.o)
+ .bss           0x00000000        0x0 ../musl/lib/libc.a(memchr.o)
+ .data          0x00000000        0x0 ../musl/lib/libc.a(stpncpy.o)
+ .bss           0x00000000        0x0 ../musl/lib/libc.a(stpncpy.o)
+ .data          0x00000000        0x0 ../musl/lib/libc.a(lseek.o)
+ .bss           0x00000000        0x0 ../musl/lib/libc.a(lseek.o)
+ .data          0x00000000        0x0 ../musl/lib/libc.a(syscall_ret.o)
+ .bss           0x00000000        0x0 ../musl/lib/libc.a(syscall_ret.o)
+ .data          0x00000000        0x0 ../musl/lib/libc.a(wcrtomb.o)
+ .bss           0x00000000        0x0 ../musl/lib/libc.a(wcrtomb.o)
+ .data          0x00000000        0x0 ../musl/lib/libc.a(__stdio_exit.o)
+ .bss           0x00000000        0x0 ../musl/lib/libc.a(__stdio_exit.o)
+ .data          0x00000000        0x0 ../musl/lib/libc.a(ofl.o)
+ .bss           0x00000000        0x0 ../musl/lib/libc.a(ofl.o)
+ .data          0x00000000        0x0 ../musl/lib/libc.a(__lock.o)
+ .bss           0x00000000        0x0 ../musl/lib/libc.a(__lock.o)
+ .data          0x00000000        0x0 ../musl/lib/libc.a(libc.o)
+ .bss           0x00000000        0x0 ../musl/lib/libc.a(libc.o)
+ .sbss.__progname_full
+                0x00000000        0x4 ../musl/lib/libc.a(libc.o)
+ .sbss.__progname
+                0x00000000        0x4 ../musl/lib/libc.a(libc.o)
+ .sbss.__hwcap  0x00000000        0x4 ../musl/lib/libc.a(libc.o)
+
+Memory Configuration
+
+Name             Origin             Length             Attributes
+BRAM             0x00000000         0x00008000         xrw
+OSDATA           0x10320000         0x000c0000         xrw
+*default*        0x00000000         0xffffffff
+
+Linker script and memory map
+
+LOAD bld/gb-rtcrelease001b/targets/pocket/boot/boot.o
+LOAD bld/gb-rtcrelease001b/hal/hal.o
+LOAD /tmp/ccCBZpdZ.ltrans0.ltrans.o
+LOAD /tmp/ccCBZpdZ.ltrans1.ltrans.o
+LOAD /tmp/ccCBZpdZ.ltrans2.ltrans.o
+LOAD /tmp/ccCBZpdZ.ltrans3.ltrans.o
+LOAD bld/gb-rtcrelease001b/hal/platform.o
+LOAD bld/gb-rtcrelease001b/hal/cache.o
+LOAD bld/gb-rtcrelease001b/hal/mixer.o
+LOAD bld/gb-rtcrelease001b/hal/sw_mixer.o
+LOAD bld/gb-rtcrelease001b/hal/net.o
+LOAD bld/gb-rtcrelease001b/hal/link.o
+LOAD bld/gb-rtcrelease001b/hal/codec.o
+LOAD bld/gb-rtcrelease001b/hal/lzw.o
+LOAD bld/gb-rtcrelease001b/hal/disk.o
+LOAD bld/gb-rtcrelease001b/hal/hid_mouse.o
+LOAD bld/gb-rtcrelease001b/hal/memtest.o
+LOAD bld/gb-rtcrelease001b/api/of_smp_tables.o
+LOAD bld/gb-rtcrelease001b/targets/pocket/video.o
+LOAD bld/gb-rtcrelease001b/targets/pocket/audio.o
+LOAD bld/gb-rtcrelease001b/targets/pocket/input.o
+LOAD bld/gb-rtcrelease001b/targets/pocket/save.o
+LOAD bld/gb-rtcrelease001b/targets/pocket/file.o
+LOAD bld/gb-rtcrelease001b/targets/pocket/analogizer.o
+LOAD bld/gb-rtcrelease001b/targets/pocket/terminal.o
+LOAD bld/gb-rtcrelease001b/targets/pocket/timer.o
+LOAD bld/gb-rtcrelease001b/targets/pocket/disk_boot.o
+LOAD bld/gb-rtcrelease001b/targets/pocket/snac.o
+LOAD bld/gb-rtcrelease001b/kernel/main.o
+LOAD bld/gb-rtcrelease001b/kernel/syscall.o
+LOAD bld/gb-rtcrelease001b/kernel/loader.o
+LOAD bld/gb-rtcrelease001b/kernel/config.o
+LOAD bld/gb-rtcrelease001b/kernel/misaligned.o
+LOAD bld/gb-rtcrelease001b/kernel/caps_table.o
+LOAD bld/gb-rtcrelease001b/kernel/services_table.o
+LOAD bld/gb-rtcrelease001b/kernel/of_malloc.o
+LOAD bld/gb-rtcrelease001b/kernel/irq.o
+LOAD bld/gb-rtcrelease001b/kernel/bank_preload.o
+LOAD bld/gb-rtcrelease001b/lib/iso9660/lib9660.o
+LOAD bld/gb-rtcrelease001b/lib/iso9660/iso9660_vfs.o
+LOAD bld/gb-rtcrelease001b/targets/pocket/boot/start.o
+LOAD bld/gb-rtcrelease001b/hal/fast_mem.o
+LOAD bld/gb-rtcrelease001b/kernel/nor108.o
+LOAD bld/gb-rtcrelease001b/nor108/cfi.o
+LOAD bld/gb-rtcrelease001b/nor108/recipe.o
+LOAD bld/gb-rtcrelease001b/nor108/execute.o
+LOAD bld/gb-rtcrelease001b/nor108/probe.o
+LOAD bld/gb-rtcrelease001b/nor108/mori/chisburner_nor_db_data.o
+LOAD bld/gb-rtcrelease001b/nor108/mori/chisburner_nor_db_lookup.o
+LOAD bld/gb-rtcrelease001b/nor108/stream131.o
+LOAD bld/gb-rtcrelease001b/nor108/submit131.o
+LOAD bld/gb-rtcrelease001b/nor108/board109.o
+LOAD bld/gb-rtcrelease001b/nor108/board_probe109.o
+LOAD bld/gb-rtcrelease001b/nor108/bank110.o
+LOAD bld/gb-rtcrelease001b/nor108/bank_probe110.o
+LOAD bld/gb-rtcrelease001b/gb_save175/gb_save175.o
+LOAD bld/gb-rtcrelease001b/gb_save175/mbc7179.o
+LOAD bld/gb-rtcrelease001b/gb_save175/rtc186.o
+LOAD bld/gb-rtcrelease001b/gb_save175/rtc189.o
+LOAD bld/gb-rtcrelease001b/gb_save175/restore180.o
+LOAD bld/gb-rtcrelease001b/gb_save175/mbc7_restore185.o
+LOAD bld/gb-rtcrelease001b/save139/eeprom139.o
+LOAD bld/gb-rtcrelease001b/save139/detect139.o
+LOAD bld/gb-rtcrelease001b/save139/probe139.o
+LOAD bld/gb-rtcrelease001b/save139/flash139.o
+LOAD bld/gb-rtcrelease001b/save139/restore158.o
+LOAD /usr/lib/gcc/riscv64-unknown-elf/13.2.0/rv32imafc/ilp32f/libgcc.a
+LOAD ../musl/lib/libc.a
+                0x10000000                        __sdram_base = 0x10000000
+                0x04000000                        __sdram_size = 0x4000000
+                0x10320000                        __os_entry = 0x10320000
+                0x10400000                        __app_load_base = 0x10400000
+
+.boot           0x00000000     0x2ef8
+ *(.text.start)
+ .text.start    0x00000000      0x226 bld/gb-rtcrelease001b/targets/pocket/boot/start.o
+                0x00000000                _start
+                0x00000220                switch_to_runtime_stack_and_call
+ *(.text.boot*)
+ .text.boot     0x00000226      0xfd6 bld/gb-rtcrelease001b/targets/pocket/boot/boot.o
+                0x00000906                boot_disk_read
+                0x0000096c                boot_disk_size
+                0x0000099c                main
+ *fill*         0x000011fc        0x4 
+ .text.boot     0x00001200       0xa6 /tmp/ccCBZpdZ.ltrans0.ltrans.o
+                0x00001200                of_term_uart_flush
+ *fill*         0x000012a6       0x1a 
+ .text.boot     0x000012c0     0x1b20 /tmp/ccCBZpdZ.ltrans1.ltrans.o
+                0x00002040                handle_misaligned
+                0x00002580                fatal_trap
+ targets/*/terminal.o(.text*)
+ targets/*/terminal.o(.rodata*)
+ targets/*/terminal.o(.srodata*)
+ targets/*/boot/boot.o(.text*)
+ targets/*/boot/boot.o(.rodata*)
+ targets/*/boot/boot.o(.srodata*)
+ *(.rodata.boot*)
+ .rodata.boot.str1.4
+                0x00002de0      0x118 bld/gb-rtcrelease001b/targets/pocket/boot/boot.o
+                                0x114 (size before relaxing)
+                0x00002ef8                        . = ALIGN (0x4)
+
+.boot_data      0x00002ef8        0x0
+ *(.data.boot*)
+ *(.sdata.boot*)
+                0x00002ef8                        . = ALIGN (0x4)
+
+.boot_bss       0x00002f00      0x2c0
+                0x00002f00                        . = ALIGN (0x4)
+                0x00002f00                        __bss_start = .
+ *(.bss.boot*)
+ .bss.boot      0x00002f00      0x12d bld/gb-rtcrelease001b/targets/pocket/boot/boot.o
+                0x00002f00                os_meta_bss_hi
+                0x00002f04                os_meta_bss_lo
+                0x00002f08                os_meta_entry
+                0x00002f0c                boot_disk_available
+                0x00002f14                os_load_crc_retries
+                0x00002f18                pd_dbg_info
+                0x00002f1c                pd_dbg_stage
+ *fill*         0x0000302d        0x3 
+ .bss.boot      0x00003030        0x4 /tmp/ccCBZpdZ.ltrans0.ltrans.o
+                0x00003030                uart_mirror_on
+ *fill*         0x00003034        0xc 
+ .bss.boot      0x00003040      0x180 bld/gb-rtcrelease001b/targets/pocket/boot/start.o
+                0x00003040                __tls_base
+ *(.sbss.boot*)
+ targets/*/boot/boot.o(.bss*)
+ targets/*/boot/boot.o(.sbss*)
+                0x000031c0                        . = ALIGN (0x4)
+                0x000031c0                        __bss_end = .
+
+.fasttext       0x000031c0      0xb38
+                0x000031c0                        . = ALIGN (0x4)
+                0x000031c0                        __fasttext_start = .
+ *(.fasttext*)
+ .fasttext.os_finalize_memory
+                0x000031c0       0x74 /tmp/ccCBZpdZ.ltrans0.ltrans.o
+                0x000031c0                os_finalize_memory
+ .fasttext      0x00003234      0x284 bld/gb-rtcrelease001b/hal/fast_mem.o
+                0x00003234                memcpy
+                0x000033ac                memset
+                0x00003442                memmove
+ *(.fastrodata*)
+ .fastrodata    0x000034b8      0x840 /tmp/ccCBZpdZ.ltrans0.ltrans.o
+                0x000034f8                font8x8
+                0x00003cf8                        . = ALIGN (0x4)
+                0x00003cf8                        __fasttext_end = .
+
+.rela.dyn       0x00003cf8        0x0
+ .rela.text.boot
+                0x00003cf8        0x0 bld/gb-rtcrelease001b/targets/pocket/boot/boot.o
+ .rela.text.start
+                0x00003cf8        0x0 bld/gb-rtcrelease001b/targets/pocket/boot/boot.o
+ .rela.text.__stdio_exit
+                0x00003cf8        0x0 bld/gb-rtcrelease001b/targets/pocket/boot/boot.o
+ .rela.text     0x00003cf8        0x0 bld/gb-rtcrelease001b/targets/pocket/boot/boot.o
+
+.fastdata       0x00003cf8        0x0
+                0x00003cf8                        . = ALIGN (0x4)
+                0x00003cf8                        __fastdata_start = .
+ *(.fastdata*)
+                0x00003cf8                        . = ALIGN (0x4)
+                0x00003cf8                        __fastdata_end = .
+
+.osdata         0x10320000    0x38f24
+                0x10320000                        . = ALIGN (0x10)
+                0x10320000                        __osdata_lma = LOADADDR (.osdata)
+                0x10320000                        __osdata_vma = .
+                0x10320000                        __text_start = .
+ *(.text*)
+ .text          0x10320000        0x0 bld/gb-rtcrelease001b/targets/pocket/boot/boot.o
+ .text          0x10320000     0xde3a /tmp/ccCBZpdZ.ltrans0.ltrans.o
+                0x103200c0                of_cache_clean_range
+                0x10322d40                of_video_get_mode
+                0x10322d80                of_video_get_mode_count
+                0x10322dc0                of_video_get_mode_info
+                0x10322e00                of_video_get_caps
+                0x10322ec0                of_video_check_mode
+                0x10322f00                of_video_get_surface
+                0x10322f40                of_video_flush_cache
+                0x10322fc0                of_video_vsync
+                0x10323180                of_video_clear
+                0x103233c0                of_audio_init
+                0x103239c0                of_input_set_deadzone
+                0x10323a40                sdram127_mmio_read.lto_priv.0
+                0x10323a80                sdram127_mmio_write.lto_priv.0
+                0x10323e80                of_timer_get_us
+                0x10323f00                of_timer_get_ms
+                0x10324440                of_audio_write
+                0x10324600                of_audio_get_free
+                0x10324700                of_input_is_docked
+                0x10325700                of_save_begin_cpu
+                0x10325740                of_cache_invalidate_icache
+                0x10325780                program_voice_play.lto_priv.0
+                0x10325cc0                sw_mixer_pump
+                0x10325d00                of_mixer_dispatch
+                0x103260c0                of_net_dispatch
+                0x10326280                of_codec_parse_voc
+                0x10326380                of_codec_parse_wav
+                0x10326500                of_lzw_compress
+                0x10326880                of_lzw_uncompress
+                0x10326b00                of_disk_read
+                0x10326c40                of_video_console_reveal
+                0x10326d40                overlay_install_palette.lto_priv.0
+                0x10326e00                of_video_set_palette_bulk
+                0x10326ec0                of_video_set_palette_vga4
+                0x10327000                of_video_set_display_mode
+                0x10327140                of_video_set_palette
+                0x10327200                of_input_irq_service
+                0x103273c0                of_input_vblank_service
+                0x10327400                of_input_get_state
+                0x10327440                of_input_get_keyboard_state
+                0x10327480                of_input_read_mouse_state
+                0x10327500                of_save_end_cpu
+                0x10327540                of_nvslot_is_supported
+                0x10327580                of_nvslot_capacity
+                0x103275c0                of_nvslot_read
+                0x10327640                of_nvslot_write
+                0x10327700                of_file_list_instances
+                0x10327740                of_file_resolve_name
+                0x10327780                of_file_config_slot
+                0x103277c0                of_check_shutdown
+                0x10327880                of_timer_delay_us
+                0x10327940                ds_issue_command.lto_priv.0
+                0x10327a40                sdram127_transfer.lto_priv.0
+                0x10327d80                of_file_read
+                0x10327e40                datatable_entry_scan_for_slot.lto_priv.0
+                0x10327f40                of_file_flags
+                0x10327fc0                of_file_dma_stage_alloc
+                0x10328040                of_file_async_max_read
+                0x10328080                of_file_dma_stage_size
+                0x103280c0                async_copy_slice.lto_priv.0
+                0x10328300                of_file_size64_common.lto_priv.0
+                0x103284c0                of_file_size
+                0x10328540                of_file_size64
+                0x10328580                of_file_dma_stage_reset
+                0x103285c0                of_file_read_async
+                0x103288c0                of_file_async_irq_service
+                0x10328940                of_file_async_poll
+                0x10328a40                of_file_async_busy
+                0x10328a80                of_term_uart_drain
+                0x10328b40                of_term_putchar
+                0x10329780                of_term_printf
+                0x103299c0                of_nvslot_set_size
+                0x10329ac0                file_wait_complete_mask.lto_priv.0
+                0x10329e80                of_file_get_name
+                0x1032a1c0                of_file_async_tick
+                0x1032a280                of_timer_get_seconds
+                0x1032a340                psx_xfer_byte.lto_priv.0
+                0x1032a4c0                psx_wait_ack_or_gap.lto_priv.0
+                0x1032a580                snac_poll.part.0
+                0x1032aa80                of_analogizer_is_enabled
+                0x1032aac0                of_video_init
+                0x1032b040                of_video_wait_flip
+                0x1032b140                of_video_vsync_irq_service
+                0x1032b980                of_video_set_mode
+                0x1032ba80                of_video_set_color_mode
+                0x1032bbc0                of_video_flip
+                0x1032bf40                of_analogizer_get_state
+                0x1032bf80                of_input_poll
+                0x1032c200                of_input_poll_p0
+                0x1032c380                os_cfg_stricmp.lto_priv.0
+                0x1032c380                cfg_stricmp.lto_priv.0
+                0x1032c440                os_main
+                0x1032dd80                cfg_find.lto_priv.0
+ *fill*         0x1032de3a        0x6 
+ .text          0x1032de40     0x98b2 /tmp/ccCBZpdZ.ltrans1.ltrans.o
+                0x1032de40                svc_psram_cache_read.lto_priv.0
+                0x1032df40                svc_input_get_state.lto_priv.0
+                0x1032df80                svc_input_get_keyboard_state.lto_priv.0
+                0x1032dfc0                svc_input_read_mouse_state.lto_priv.0
+                0x1032e180                svc_cart_get_caps.lto_priv.0
+                0x1032e400                svc_cart_read.lto_priv.0
+                0x1032e700                alive.lto_priv.0
+                0x1032e780                now_ms.lto_priv.0
+                0x1032eb40                svc_cart_flash_erase_sector.lto_priv.0
+                0x1032eb80                svc_cart_flash_program.lto_priv.0
+                0x1032ef40                idle_hook.lto_priv.1
+                0x1032efc0                board_epoch.lto_priv.0
+                0x1032f080                gb175_live.lto_priv.0
+                0x1032f100                gb175_cancel.lto_priv.0
+                0x1032f140                of_config_get
+                0x1032f200                of_config_get_int
+                0x1032f380                svc_psram_cache_load.lto_priv.0
+                0x1032f540                svc_output_flush.lto_priv.0
+                0x1032f600                svc_video_set_palette.lto_priv.0
+                0x1032f6c0                svc_timer_set_callback.lto_priv.0
+                0x1032f700                svc_timer_stop.lto_priv.0
+                0x1032f740                svc_mixer_set_end_callback.lto_priv.0
+                0x1032f780                svc_video_set_vsync_callback.lto_priv.0
+                0x1032f7c0                svc_file_size_fd.lto_priv.0
+                0x1032f800                svc_file_size.lto_priv.0
+                0x1032f840                svc_output_open.lto_priv.0
+                0x1032fd00                svc_output_write.lto_priv.0
+                0x1032fe40                svc_cart_enter_safe_idle.lto_priv.0
+                0x1032fec0                svc_cart_flash_get_caps.lto_priv.0
+                0x103300c0                svc_cart_abort.lto_priv.0
+                0x10330200                svc_cart_query_info.lto_priv.0
+                0x10330280                svc_cart_ping.lto_priv.0
+                0x103302c0                svc_cart_flash_disarm.lto_priv.0
+                0x10330dc0                normal_probe.lto_priv.0
+                0x10331540                gb175_capture_service
+                0x10331580                gb176_capture_service
+                0x103315c0                gb177_capture_service
+                0x10331600                gb178_capture_service
+                0x10331640                gb179_capture_service
+                0x10331680                gb186_read_service
+                0x10331800                gb189_write_service
+                0x10331ec0                tg_crc_uncached.lto_priv.0
+                0x10331f80                os_textguard_check
+                0x10332100                dlmalloc
+                0x10333280                dlfree
+                0x10333880                dlcalloc
+                0x10333900                dlrealloc
+                0x10333c40                iso9660_mount
+                0x10333e40                iso9660_unmount
+                0x10333e80                iso9660_open_file
+                0x10333f80                iso9660_open_dir
+                0x103340c0                iso9660_read_file
+                0x10334140                iso9660_seek_file
+                0x10334180                iso9660_tell_file
+                0x103341c0                iso9660_size_file
+                0x10334200                iso9660_read_dir
+                0x10334300                iso9660_stat
+                0x10334380                wait_idle.lto_priv.0
+                0x103344c0                release.lto_priv.0
+                0x10334680                enter.lto_priv.0
+                0x10334900                transaction.lto_priv.0
+                0x10334f80                normal_control.lto_priv.0
+                0x10335240                select_bus.lto_priv.0
+                0x10335340                leave.lto_priv.0
+                0x10335640                svc_cart_read_space.lto_priv.0
+                0x10336380                gb175_acquire.lto_priv.0
+                0x10336480                gb175_release.lto_priv.0
+                0x103365c0                gb175_header.lto_priv.0
+                0x10336640                gb175_control.lto_priv.0
+                0x10336900                gb175_ram.lto_priv.0
+                0x10336c40                gb180_write.lto_priv.0
+                0x10336d00                capture.lto_priv.0
+                0x10337400                svc_video_set_color_mode.lto_priv.0
+                0x10337440                of_config_get_bool
+                0x10337500                of_config_next
+ *fill*         0x103376f2        0xe 
+ .text          0x10337700     0x8d28 /tmp/ccCBZpdZ.ltrans2.ltrans.o
+                0x10337700                save139_alive.lto_priv.0
+                0x10337780                save139_delay.lto_priv.0
+                0x10337c80                rtc167_live.lto_priv.0
+                0x10338500                eeprom139_same_cart.lto_priv.0
+                0x10338e40                eeprom139_read_owned.lto_priv.0
+                0x10339180                nor131_compare_result
+                0x10339700                gb180_restore_service
+                0x1033a6c0                save139_write.lto_priv.0
+                0x1033a780                rtc167_bus_read.lto_priv.0
+                0x1033a800                rtc167_bus_write.lto_priv.0
+                0x1033ab40                eeprom139_release_owned.lto_priv.0
+                0x1033ac00                nor131_program_step
+                0x1033afc0                save139_read.lto_priv.0
+                0x1033c6c0                eeprom139_detect_service
+                0x1033c800                eeprom139_capture_service
+                0x1033cac0                nor108_probe
+                0x1033d140                nor108_begin
+                0x1033d180                nor130_begin_full
+                0x1033d1c0                sram138_read
+                0x1033d680                flash166_bank.lto_priv.0
+                0x1033d900                cb_rtc167_capture.lto_priv.0
+                0x1033ddc0                rtc172_write_service
+                0x1033e540                operation_begin.lto_priv.0
+                0x1033e680                nor131_program_next
+                0x1033eb40                nor131_compare_start
+                0x1033f000                nor108_erase
+                0x1033f140                nor130_erase_poll
+                0x1033f280                nor108_program
+                0x1033f380                nor130_program_poll
+                0x1033f680                sram160_restore_service
+                0x1033fb00                eeprom162_restore_service
+                0x1033fb40                save171_restore_service
+                0x1033fdc0                flash170_restore_service
+ *fill*         0x10340428       0x18 
+ .text          0x10340440     0x80ec /tmp/ccCBZpdZ.ltrans3.ltrans.o
+                0x10340880                no_cancel185.lto_priv.0
+                0x10340a80                nor108_verify_read
+                0x10340ec0                alive.constprop.0
+                0x10340f40                nor130_verify_full_read
+                0x10341440                cb_nor_recipe_make
+                0x103417c0                cb_nor_plan_make
+                0x10341d00                cb_nor_sector_at
+                0x10341f40                chisburner_nor_db_lookup.lto_priv.0
+                0x10342000                cb_stream131_chunk
+                0x10342080                cb_board109_profile
+                0x10342200                cb_board109_bank_id
+                0x10342280                live.lto_priv.0
+                0x103422c0                wr.lto_priv.0
+                0x10342340                rd.lto_priv.0
+                0x10342380                settle.lto_priv.0
+                0x10342400                sequence.lto_priv.0
+                0x10342480                reset.lto_priv.0
+                0x103424c0                query.lto_priv.0
+                0x10342540                cb_bank110_select
+                0x10342600                valid_plan.lto_priv.0
+                0x103426c0                control180.lto_priv.0
+                0x103426c0                put.lto_priv.1
+                0x10342740                put.lto_priv.0
+                0x103427c0                read_regs.lto_priv.0
+                0x10342900                wr.lto_priv.1
+                0x10342980                pin185.lto_priv.0
+                0x103429c0                cmd185.lto_priv.0
+                0x10342b00                read185.lto_priv.0
+                0x10342c80                cb_save139_classify
+                0x10342e80                cb_save139_probe_flash
+                0x10343440                guard.constprop.0
+                0x103434c0                nor108_finish
+                0x10343a80                erase_impl.part.0.constprop.0
+                0x10343e40                program_impl.constprop.0
+                0x103444c0                cb_submit131_begin.constprop.0
+                0x103445c0                select_bank.constprop.0
+                0x10344700                matches.constprop.0
+                0x103447c0                probe.constprop.0
+                0x10344bc0                cb_nor_decode_cfi.constprop.0
+                0x10345000                cb_nor_probe_bus.constprop.0
+                0x10345900                gb175_plan_header.constprop.0
+                0x10345a00                gb186_header
+                0x10345ac0                gb186_read
+                0x10345ec0                gb176_plan.constprop.0
+                0x10345f80                gb177_plan.constprop.0
+                0x103461c0                gb178_plan.constprop.0
+                0x10346240                capture_plan.constprop.0
+                0x10346800                gb179_plan.constprop.0
+                0x103469c0                iso_path_normalize.constprop.0
+                0x10346b40                l9660_dirent_name.constprop.0
+                0x10346d40                dispose_chunk.constprop.0
+                0x10347140                cb_board109_unlock.constprop.0
+                0x10347200                cb_board109_select.constprop.0
+                0x10347300                svc_cart_wait_control.constprop.0
+                0x10347480                prepare_app_launch_ex.constprop.0
+                0x10347780                snac_poll_if_due.part.0.constprop.0
+                0x10347840                dense_block.constprop.0
+                0x10347900                hid_mouse_decode.part.0.constprop.0
+                0x10347b00                cb_sd117_prepare.constprop.0
+                0x10347c00                sdram127_outbound_command.constprop.0
+                0x10347ec0                snac_commit_state.part.0.constprop.0.isra.0
+                0x10347f40                poll_psx_att.constprop.0
+                0x10348200                mixer_reap_ended_pending.isra.0
+                0x10348440                play_internal_h.constprop.0
+ .text          0x1034852c        0x0 bld/gb-rtcrelease001b/api/of_smp_tables.o
+ .text.smp_cents_fold
+                0x1034852c       0x20 bld/gb-rtcrelease001b/api/of_smp_tables.o
+ .text.smp_timecents_to_ticks
+                0x1034854c       0x8c bld/gb-rtcrelease001b/api/of_smp_tables.o
+                0x1034854c                smp_timecents_to_ticks
+ .text.smp_cents_to_multiplier
+                0x103485d8       0x34 bld/gb-rtcrelease001b/api/of_smp_tables.o
+                0x103485d8                smp_cents_to_multiplier
+ .text.smp_cb_to_level
+                0x1034860c       0x7a bld/gb-rtcrelease001b/api/of_smp_tables.o
+                0x1034860c                smp_cb_to_level
+ .text.smp_lfo_freq_cents_to_rate
+                0x10348686       0x3c bld/gb-rtcrelease001b/api/of_smp_tables.o
+                0x10348686                smp_lfo_freq_cents_to_rate
+ .text.smp_cb_to_attn_scale
+                0x103486c2       0x30 bld/gb-rtcrelease001b/api/of_smp_tables.o
+                0x103486c2                smp_cb_to_attn_scale
+ .text          0x103486f2        0x0 bld/gb-rtcrelease001b/kernel/syscall.o
+ *fill*         0x103486f2        0xe 
+ .text.stricmp  0x10348700       0x82 bld/gb-rtcrelease001b/kernel/syscall.o
+ *fill*         0x10348782       0x3e 
+ .text.file_slot_lookup
+                0x103487c0      0x12c bld/gb-rtcrelease001b/kernel/syscall.o
+ *fill*         0x103488ec       0x14 
+ .text.mount_path_match
+                0x10348900       0xba bld/gb-rtcrelease001b/kernel/syscall.o
+ *fill*         0x103489ba        0x6 
+ .text.mmap_coalesce_bottom
+                0x103489c0       0xbc bld/gb-rtcrelease001b/kernel/syscall.o
+ *fill*         0x10348a7c        0x4 
+ .text.mmap_find_reusable
+                0x10348a80       0xc2 bld/gb-rtcrelease001b/kernel/syscall.o
+ *fill*         0x10348b42       0x3e 
+ .text.open_nv_fd
+                0x10348b80      0x2c0 bld/gb-rtcrelease001b/kernel/syscall.o
+ *fill*         0x10348e40        0x0 
+ .text.sys_munmap.part.0
+                0x10348e40       0x7e bld/gb-rtcrelease001b/kernel/syscall.o
+ *fill*         0x10348ebe        0x2 
+ .text.sys_close
+                0x10348ec0       0xfa bld/gb-rtcrelease001b/kernel/syscall.o
+ *fill*         0x10348fba        0x6 
+ .text.sys_write
+                0x10348fc0      0x1d2 bld/gb-rtcrelease001b/kernel/syscall.o
+ *fill*         0x10349192       0x2e 
+ .text.vfs_find_mount.constprop.0
+                0x103491c0       0xca bld/gb-rtcrelease001b/kernel/syscall.o
+ *fill*         0x1034928a       0x36 
+ .text.sys_mmap2.isra.0
+                0x103492c0      0x2b4 bld/gb-rtcrelease001b/kernel/syscall.o
+ *fill*         0x10349574        0xc 
+ .text.slot_read_cached
+                0x10349580      0x2e4 bld/gb-rtcrelease001b/kernel/syscall.o
+ *fill*         0x10349864       0x1c 
+ .text.sys_read
+                0x10349880      0x2d0 bld/gb-rtcrelease001b/kernel/syscall.o
+ *fill*         0x10349b50       0x30 
+ .text.normalize_abs_path.constprop.0
+                0x10349b80      0x318 bld/gb-rtcrelease001b/kernel/syscall.o
+ *fill*         0x10349e98       0x28 
+ .text.sys_unmount_path
+                0x10349ec0      0x170 bld/gb-rtcrelease001b/kernel/syscall.o
+ *fill*         0x1034a030       0x10 
+ .text.vfs_open_if_mounted
+                0x1034a040      0x12e bld/gb-rtcrelease001b/kernel/syscall.o
+ *fill*         0x1034a16e       0x12 
+ .text.of_os_timer_set_callback
+                0x1034a180      0x102 bld/gb-rtcrelease001b/kernel/syscall.o
+                0x1034a180                of_os_timer_set_callback
+ *fill*         0x1034a282       0x3e 
+ .text.of_os_timer_boot_arm
+                0x1034a2c0       0x42 bld/gb-rtcrelease001b/kernel/syscall.o
+                0x1034a2c0                of_os_timer_boot_arm
+ *fill*         0x1034a302       0x3e 
+ .text.timer_isr_callback
+                0x1034a340       0x76 bld/gb-rtcrelease001b/kernel/syscall.o
+                0x1034a340                timer_isr_callback
+ *fill*         0x1034a3b6        0xa 
+ .text.file_slot_register
+                0x1034a3c0       0x7e bld/gb-rtcrelease001b/kernel/syscall.o
+                0x1034a3c0                file_slot_register
+ *fill*         0x1034a43e        0x2 
+ .text.dir_probe_slots
+                0x1034a440       0xfc bld/gb-rtcrelease001b/kernel/syscall.o
+ *fill*         0x1034a53c        0x4 
+ .text.sys_mount_iso
+                0x1034a540      0x324 bld/gb-rtcrelease001b/kernel/syscall.o
+ *fill*         0x1034a864       0x1c 
+ .text.sys_openat.isra.0
+                0x1034a880      0x61e bld/gb-rtcrelease001b/kernel/syscall.o
+ *fill*         0x1034ae9e       0x22 
+ .text.stat_path_info
+                0x1034aec0      0x216 bld/gb-rtcrelease001b/kernel/syscall.o
+ *fill*         0x1034b0d6       0x2a 
+ .text.linux_dispatch.isra.0
+                0x1034b100     0x10ce bld/gb-rtcrelease001b/kernel/syscall.o
+ *fill*         0x1034c1ce       0x32 
+ .text.file_slot_get_count
+                0x1034c200       0x42 bld/gb-rtcrelease001b/kernel/syscall.o
+                0x1034c200                file_slot_get_count
+ *fill*         0x1034c242       0x3e 
+ .text.file_slot_get
+                0x1034c280       0x42 bld/gb-rtcrelease001b/kernel/syscall.o
+                0x1034c280                file_slot_get
+ *fill*         0x1034c2c2       0x3e 
+ .text.file_slot_find
+                0x1034c300       0x88 bld/gb-rtcrelease001b/kernel/syscall.o
+                0x1034c300                file_slot_find
+ *fill*         0x1034c388       0x38 
+ .text.of_brk_limit
+                0x1034c3c0       0x42 bld/gb-rtcrelease001b/kernel/syscall.o
+                0x1034c3c0                of_brk_limit
+ *fill*         0x1034c402       0x3e 
+ .text.filesystem_init
+                0x1034c440       0x3e bld/gb-rtcrelease001b/kernel/syscall.o
+                0x1034c440                filesystem_init
+ *fill*         0x1034c47e        0x2 
+ .text.sys_openat_svc
+                0x1034c480       0x3e bld/gb-rtcrelease001b/kernel/syscall.o
+                0x1034c480                sys_openat_svc
+ *fill*         0x1034c4be        0x2 
+ .text.sys_close_svc
+                0x1034c4c0       0x3e bld/gb-rtcrelease001b/kernel/syscall.o
+                0x1034c4c0                sys_close_svc
+ *fill*         0x1034c4fe        0x2 
+ .text.sys_file_size_fd
+                0x1034c500       0xc2 bld/gb-rtcrelease001b/kernel/syscall.o
+                0x1034c500                sys_file_size_fd
+ *fill*         0x1034c5c2       0x3e 
+ .text.syscall_alloc_app_mmap
+                0x1034c600       0x3e bld/gb-rtcrelease001b/kernel/syscall.o
+                0x1034c600                syscall_alloc_app_mmap
+ *fill*         0x1034c63e        0x2 
+ .text.syscall_free_app_mmap
+                0x1034c640       0x3e bld/gb-rtcrelease001b/kernel/syscall.o
+                0x1034c640                syscall_free_app_mmap
+ *fill*         0x1034c67e        0x2 
+ .text.syscall_dispatch
+                0x1034c680      0x5c4 bld/gb-rtcrelease001b/kernel/syscall.o
+                0x1034c680                syscall_dispatch
+ *fill*         0x1034cc44       0x3c 
+ .text.syscall_init
+                0x1034cc80      0x19e bld/gb-rtcrelease001b/kernel/syscall.o
+                0x1034cc80                syscall_init
+ *fill*         0x1034ce1e       0x22 
+ .text.syscall_set_app_stack_top
+                0x1034ce40       0x98 bld/gb-rtcrelease001b/kernel/syscall.o
+                0x1034ce40                syscall_set_app_stack_top
+ .text          0x1034ced8        0x0 bld/gb-rtcrelease001b/kernel/irq.o
+ *fill*         0x1034ced8       0x28 
+ .text.of_irq_init
+                0x1034cf00       0x42 bld/gb-rtcrelease001b/kernel/irq.o
+                0x1034cf00                of_irq_init
+ *fill*         0x1034cf42       0x3e 
+ .text.of_irq_enable_cpu
+                0x1034cf80       0x42 bld/gb-rtcrelease001b/kernel/irq.o
+                0x1034cf80                of_irq_enable_cpu
+ *fill*         0x1034cfc2       0x3e 
+ .text.of_irq_register_external
+                0x1034d000       0x42 bld/gb-rtcrelease001b/kernel/irq.o
+                0x1034d000                of_irq_register_external
+ *fill*         0x1034d042       0x3e 
+ .text.of_irq_register_vsync
+                0x1034d080       0x42 bld/gb-rtcrelease001b/kernel/irq.o
+                0x1034d080                of_irq_register_vsync
+ *fill*         0x1034d0c2       0x3e 
+ .text.of_irq_register_mixer_end
+                0x1034d100        0x2 bld/gb-rtcrelease001b/kernel/irq.o
+                0x1034d100                of_irq_register_mixer_end
+ *fill*         0x1034d102       0x3e 
+ .text.of_irq_register_link_rx
+                0x1034d140       0x42 bld/gb-rtcrelease001b/kernel/irq.o
+                0x1034d140                of_irq_register_link_rx
+ *fill*         0x1034d182       0x3e 
+ .text.irq_handler
+                0x1034d1c0      0x12a bld/gb-rtcrelease001b/kernel/irq.o
+                0x1034d1c0                irq_handler
+ .text          0x1034d2ea        0x0 bld/gb-rtcrelease001b/targets/pocket/boot/start.o
+ .text          0x1034d2ea        0x0 bld/gb-rtcrelease001b/hal/fast_mem.o
+ .text          0x1034d2ea       0x28 /usr/lib/gcc/riscv64-unknown-elf/13.2.0/rv32imafc/ilp32f/libgcc.a(_lshrdi3.o)
+                0x1034d2ea                __lshrdi3
+ .text          0x1034d312      0x39e /usr/lib/gcc/riscv64-unknown-elf/13.2.0/rv32imafc/ilp32f/libgcc.a(_divdi3.o)
+                0x1034d312                __divdi3
+ .text          0x1034d6b0      0x35e /usr/lib/gcc/riscv64-unknown-elf/13.2.0/rv32imafc/ilp32f/libgcc.a(_udivdi3.o)
+                0x1034d6b0                __udivdi3
+ .text          0x1034da0e        0x0 /usr/lib/gcc/riscv64-unknown-elf/13.2.0/rv32imafc/ilp32f/libgcc.a(_clz.o)
+ .text          0x1034da0e       0x28 /usr/lib/gcc/riscv64-unknown-elf/13.2.0/rv32imafc/ilp32f/libgcc.a(_ashldi3.o)
+                0x1034da0e                __ashldi3
+ .text          0x1034da36      0x384 /usr/lib/gcc/riscv64-unknown-elf/13.2.0/rv32imafc/ilp32f/libgcc.a(_moddi3.o)
+                0x1034da36                __moddi3
+ .text          0x1034ddba      0x328 /usr/lib/gcc/riscv64-unknown-elf/13.2.0/rv32imafc/ilp32f/libgcc.a(_umoddi3.o)
+                0x1034ddba                __umoddi3
+ .text          0x1034e0e2     0x10d8 /usr/lib/gcc/riscv64-unknown-elf/13.2.0/rv32imafc/ilp32f/libgcc.a(addtf3.o)
+                0x1034e0e2                __addtf3
+ .text          0x1034f1ba       0xec /usr/lib/gcc/riscv64-unknown-elf/13.2.0/rv32imafc/ilp32f/libgcc.a(eqtf2.o)
+                0x1034f1ba                __eqtf2
+                0x1034f1ba                __netf2
+ .text          0x1034f2a6      0xc9c /usr/lib/gcc/riscv64-unknown-elf/13.2.0/rv32imafc/ilp32f/libgcc.a(multf3.o)
+                0x1034f2a6                __multf3
+ .text          0x1034ff42     0x10f0 /usr/lib/gcc/riscv64-unknown-elf/13.2.0/rv32imafc/ilp32f/libgcc.a(subtf3.o)
+                0x1034ff42                __subtf3
+ .text          0x10351032      0x124 /usr/lib/gcc/riscv64-unknown-elf/13.2.0/rv32imafc/ilp32f/libgcc.a(fixtfsi.o)
+                0x10351032                __fixtfsi
+ .text          0x10351156       0xf0 /usr/lib/gcc/riscv64-unknown-elf/13.2.0/rv32imafc/ilp32f/libgcc.a(fixunstfsi.o)
+                0x10351156                __fixunstfsi
+ .text          0x10351246       0xd2 /usr/lib/gcc/riscv64-unknown-elf/13.2.0/rv32imafc/ilp32f/libgcc.a(floatsitf.o)
+                0x10351246                __floatsitf
+ .text          0x10351318       0xba /usr/lib/gcc/riscv64-unknown-elf/13.2.0/rv32imafc/ilp32f/libgcc.a(floatunsitf.o)
+                0x10351318                __floatunsitf
+ .text          0x103513d2      0x18c /usr/lib/gcc/riscv64-unknown-elf/13.2.0/rv32imafc/ilp32f/libgcc.a(extenddftf2.o)
+                0x103513d2                __extenddftf2
+ .text          0x1035155e       0x3c /usr/lib/gcc/riscv64-unknown-elf/13.2.0/rv32imafc/ilp32f/libgcc.a(_clzsi2.o)
+                0x1035155e                __clzsi2
+ .text          0x1035159a        0x0 ../musl/lib/libc.a(fprintf.o)
+ .text.fprintf  0x1035159a       0x22 ../musl/lib/libc.a(fprintf.o)
+                0x1035159a                fprintf
+ .text          0x103515bc        0x0 ../musl/lib/libc.a(snprintf.o)
+ .text.snprintf
+                0x103515bc       0x20 ../musl/lib/libc.a(snprintf.o)
+                0x103515bc                snprintf
+ .text          0x103515dc        0x0 ../musl/lib/libc.a(stderr.o)
+ .text          0x103515dc        0x0 ../musl/lib/libc.a(vfprintf.o)
+ .text.pop_arg  0x103515dc      0x108 ../musl/lib/libc.a(vfprintf.o)
+ .text.pad.part.0
+                0x103516e4       0xae ../musl/lib/libc.a(vfprintf.o)
+ .text.fmt_fp   0x10351792     0x129a ../musl/lib/libc.a(vfprintf.o)
+ .text.printf_core
+                0x10352a2c      0xa96 ../musl/lib/libc.a(vfprintf.o)
+ .text.vfprintf
+                0x103534c2      0x14e ../musl/lib/libc.a(vfprintf.o)
+                0x103534c2                vfprintf
+ .text          0x10353610        0x0 ../musl/lib/libc.a(vsnprintf.o)
+ .text.sn_write
+                0x10353610       0xac ../musl/lib/libc.a(vsnprintf.o)
+ .text.vsnprintf
+                0x103536bc       0x5e ../musl/lib/libc.a(vsnprintf.o)
+                0x103536bc                vsnprintf
+ .text          0x1035371a        0x0 ../musl/lib/libc.a(memcmp.o)
+ .text.memcmp   0x1035371a       0x20 ../musl/lib/libc.a(memcmp.o)
+                0x1035371a                memcmp
+ .text          0x1035373a        0x0 ../musl/lib/libc.a(strcmp.o)
+ .text.strcmp   0x1035373a       0x18 ../musl/lib/libc.a(strcmp.o)
+                0x1035373a                strcmp
+ .text          0x10353752        0x0 ../musl/lib/libc.a(strncmp.o)
+ .text.strncmp  0x10353752       0x50 ../musl/lib/libc.a(strncmp.o)
+                0x10353752                strncmp
+ .text          0x103537a2        0x0 ../musl/lib/libc.a(strncpy.o)
+ .text.strncpy  0x103537a2       0x14 ../musl/lib/libc.a(strncpy.o)
+                0x103537a2                strncpy
+ .text          0x103537b6        0x0 ../musl/lib/libc.a(strnlen.o)
+ .text.strnlen  0x103537b6       0x2c ../musl/lib/libc.a(strnlen.o)
+                0x103537b6                strnlen
+ .text          0x103537e2        0x0 ../musl/lib/libc.a(__errno_location.o)
+ .text.__errno_location
+                0x103537e2        0x8 ../musl/lib/libc.a(__errno_location.o)
+                0x103537e2                ___errno_location
+                0x103537e2                __errno_location
+ .text          0x103537ea        0x0 ../musl/lib/libc.a(strerror.o)
+ .text.__strerror_l
+                0x103537ea       0x32 ../musl/lib/libc.a(strerror.o)
+                0x103537ea                strerror_l
+                0x103537ea                __strerror_l
+ .text.strerror
+                0x1035381c       0x38 ../musl/lib/libc.a(strerror.o)
+                0x1035381c                strerror
+ .text          0x10353854        0x0 ../musl/lib/libc.a(__lctrans.o)
+ .text.dummy    0x10353854        0x2 ../musl/lib/libc.a(__lctrans.o)
+                0x10353854                __lctrans_impl
+ .text.__lctrans
+                0x10353856        0x4 ../musl/lib/libc.a(__lctrans.o)
+                0x10353856                __lctrans
+ .text.__lctrans_cur
+                0x1035385a        0xc ../musl/lib/libc.a(__lctrans.o)
+                0x1035385a                __lctrans_cur
+ .text          0x10353866        0x0 ../musl/lib/libc.a(__fpclassifyl.o)
+ .text.__fpclassifyl
+                0x10353866       0x46 ../musl/lib/libc.a(__fpclassifyl.o)
+                0x10353866                __fpclassifyl
+ .text          0x103538ac        0x0 ../musl/lib/libc.a(__signbitl.o)
+ .text.__signbitl
+                0x103538ac        0x6 ../musl/lib/libc.a(__signbitl.o)
+                0x103538ac                __signbitl
+ .text          0x103538b2        0x0 ../musl/lib/libc.a(frexpl.o)
+ .text.frexpl   0x103538b2       0xfc ../musl/lib/libc.a(frexpl.o)
+                0x103538b2                frexpl
+ .text          0x103539ae        0x0 ../musl/lib/libc.a(wctomb.o)
+ .text.wctomb   0x103539ae        0x8 ../musl/lib/libc.a(wctomb.o)
+                0x103539ae                wctomb
+ .text          0x103539b6        0x0 ../musl/lib/libc.a(__lockfile.o)
+ .text.__lockfile
+                0x103539b6       0xae ../musl/lib/libc.a(__lockfile.o)
+                0x103539b6                __lockfile
+ .text.__unlockfile
+                0x10353a64       0x46 ../musl/lib/libc.a(__lockfile.o)
+                0x10353a64                __unlockfile
+ .text          0x10353aaa        0x0 ../musl/lib/libc.a(__stdio_close.o)
+ .text.dummy    0x10353aaa        0x2 ../musl/lib/libc.a(__stdio_close.o)
+                0x10353aaa                __aio_close
+ .text.__stdio_close
+                0x10353aac       0x18 ../musl/lib/libc.a(__stdio_close.o)
+                0x10353aac                __stdio_close
+ .text          0x10353ac4        0x0 ../musl/lib/libc.a(__stdio_seek.o)
+ .text.__stdio_seek
+                0x10353ac4        0x4 ../musl/lib/libc.a(__stdio_seek.o)
+                0x10353ac4                __stdio_seek
+ .text          0x10353ac8        0x0 ../musl/lib/libc.a(__stdio_write.o)
+ .text.__stdio_write
+                0x10353ac8       0xbc ../musl/lib/libc.a(__stdio_write.o)
+                0x10353ac8                __stdio_write
+ .text          0x10353b84        0x0 ../musl/lib/libc.a(__towrite.o)
+ .text.__towrite
+                0x10353b84       0x34 ../musl/lib/libc.a(__towrite.o)
+                0x10353b84                __towrite
+ .text.__towrite_needs_stdio_exit
+                0x10353bb8        0x2 ../musl/lib/libc.a(__towrite.o)
+                0x10353bb8                __towrite_needs_stdio_exit
+ .text          0x10353bba        0x0 ../musl/lib/libc.a(fwrite.o)
+ .text.__fwritex
+                0x10353bba       0xa0 ../musl/lib/libc.a(fwrite.o)
+                0x10353bba                __fwritex
+ .text.fwrite   0x10353c5a       0x70 ../musl/lib/libc.a(fwrite.o)
+                0x10353c5a                fwrite_unlocked
+                0x10353c5a                fwrite
+ .text          0x10353cca        0x0 ../musl/lib/libc.a(memchr.o)
+ .text.memchr   0x10353cca       0x8a ../musl/lib/libc.a(memchr.o)
+                0x10353cca                memchr
+ .text          0x10353d54        0x0 ../musl/lib/libc.a(stpncpy.o)
+ .text.__stpncpy
+                0x10353d54       0x9e ../musl/lib/libc.a(stpncpy.o)
+                0x10353d54                stpncpy
+                0x10353d54                __stpncpy
+ .text          0x10353df2        0x0 ../musl/lib/libc.a(lseek.o)
+ .text.__lseek  0x10353df2       0x2a ../musl/lib/libc.a(lseek.o)
+                0x10353df2                lseek
+                0x10353df2                __lseek
+ .text          0x10353e1c        0x0 ../musl/lib/libc.a(syscall_ret.o)
+ .text.__syscall_ret
+                0x10353e1c       0x22 ../musl/lib/libc.a(syscall_ret.o)
+                0x10353e1c                __syscall_ret
+ .text          0x10353e3e        0x0 ../musl/lib/libc.a(wcrtomb.o)
+ .text.wcrtomb  0x10353e3e       0xfa ../musl/lib/libc.a(wcrtomb.o)
+                0x10353e3e                wcrtomb
+ .text          0x10353f38        0x0 ../musl/lib/libc.a(__stdio_exit.o)
+ .text.close_file
+                0x10353f38       0x4e ../musl/lib/libc.a(__stdio_exit.o)
+ .text.__stdio_exit
+                0x10353f86       0x40 ../musl/lib/libc.a(__stdio_exit.o)
+                0x10353f86                __stdio_exit
+                0x10353f86                __stdio_exit_needed
+ .text          0x10353fc6        0x0 ../musl/lib/libc.a(ofl.o)
+ .text.__ofl_lock
+                0x10353fc6       0x1c ../musl/lib/libc.a(ofl.o)
+                0x10353fc6                __ofl_lock
+ .text.__ofl_unlock
+                0x10353fe2        0xa ../musl/lib/libc.a(ofl.o)
+                0x10353fe2                __ofl_unlock
+ .text          0x10353fec        0x0 ../musl/lib/libc.a(__lock.o)
+ .text.__lock   0x10353fec       0xf6 ../musl/lib/libc.a(__lock.o)
+                0x10353fec                __lock
+ .text.__unlock
+                0x103540e2       0x54 ../musl/lib/libc.a(__lock.o)
+                0x103540e2                __unlock
+ .text          0x10354136        0x0 ../musl/lib/libc.a(libc.o)
+ *(.app_fasttext*)
+ *fill*         0x10354136        0xa 
+ .app_fasttext  0x10354140       0x42 /tmp/ccCBZpdZ.ltrans0.ltrans.o
+ *(.app_fastrodata*)
+                0x10354190                        . = ALIGN (0x10)
+ *fill*         0x10354182        0xe 
+                0x10354190                        __text_end = .
+                0x10354190                        __osdata_rodata_vma = .
+ *(.rodata*)
+ .rodata        0x10354190      0x580 /tmp/ccCBZpdZ.ltrans0.ltrans.o
+                0x1035466c                CSWTCH.85.lto_priv.0
+                0x10354684                vga16.0.lto_priv.0
+                0x10354684                overlay_term_pal.lto_priv.0
+                0x10354704                sdram127_mmio.lto_priv.0
+ .rodata.str1.4
+                0x10354710      0x818 /tmp/ccCBZpdZ.ltrans0.ltrans.o
+ .rodata.str1.4
+                0x10354710      0x2bc /tmp/ccCBZpdZ.ltrans1.ltrans.o
+ .rodata        0x10354710      0x14c /tmp/ccCBZpdZ.ltrans1.ltrans.o
+                0x1035483c                normal_io.lto_priv.0
+ .rodata        0x1035485c       0xcc /tmp/ccCBZpdZ.ltrans2.ltrans.o
+ .rodata.str1.4
+                0x10354928       0x2c /tmp/ccCBZpdZ.ltrans2.ltrans.o
+ .rodata.str1.4
+                0x10354928      0x48d /tmp/ccCBZpdZ.ltrans3.ltrans.o
+ .rodata        0x10354928      0xf5c /tmp/ccCBZpdZ.ltrans3.ltrans.o
+ .rodata.smp_cents_to_mult
+                0x10355884     0x12c0 bld/gb-rtcrelease001b/api/of_smp_tables.o
+                0x10355884                smp_cents_to_mult
+ .rodata.sys_mmap2.isra.0.str1.4
+                0x10356b44     0x1051 bld/gb-rtcrelease001b/kernel/syscall.o
+                                 0x64 (size before relaxing)
+ .rodata.file_slot_register.str1.4
+                0x10357b95       0x2d bld/gb-rtcrelease001b/kernel/syscall.o
+ .rodata.sys_mount_iso.str1.4
+                0x10357b95        0x6 bld/gb-rtcrelease001b/kernel/syscall.o
+ .rodata.sys_openat.isra.0.str1.4
+                0x10357b95       0x1b bld/gb-rtcrelease001b/kernel/syscall.o
+ *fill*         0x10357b95        0x3 
+ .rodata.linux_dispatch.isra.0
+                0x10357b98      0x3cc bld/gb-rtcrelease001b/kernel/syscall.o
+ .rodata.syscall_dispatch.str1.4
+                0x10357f64        0x8 bld/gb-rtcrelease001b/kernel/syscall.o
+ .rodata.syscall_dispatch
+                0x10357f64       0xe0 bld/gb-rtcrelease001b/kernel/syscall.o
+ .rodata        0x10358044      0x100 /usr/lib/gcc/riscv64-unknown-elf/13.2.0/rv32imafc/ilp32f/libgcc.a(_clz.o)
+                0x10358044                __clz_tab
+ .rodata.pop_arg
+                0x10358144       0x48 ../musl/lib/libc.a(vfprintf.o)
+ .rodata.fmt_fp.str1.4
+                0x1035818c       0x26 ../musl/lib/libc.a(vfprintf.o)
+ .rodata.printf_core.str1.4
+                0x1035818c       0x13 ../musl/lib/libc.a(vfprintf.o)
+ .rodata.printf_core
+                0x1035818c      0x100 ../musl/lib/libc.a(vfprintf.o)
+ .rodata.xdigits
+                0x1035828c       0x10 ../musl/lib/libc.a(vfprintf.o)
+ .rodata.states
+                0x1035829c      0x1d0 ../musl/lib/libc.a(vfprintf.o)
+ .rodata.errmsgidx
+                0x1035846c      0x108 ../musl/lib/libc.a(strerror.o)
+ .rodata.errmsgstr
+                0x10358574      0x77a ../musl/lib/libc.a(strerror.o)
+ *(.srodata*)
+ *fill*         0x10358cee        0x2 
+ .srodata       0x10358cf0       0x18 /tmp/ccCBZpdZ.ltrans0.ltrans.o
+ .srodata       0x10358d08       0x10 /tmp/ccCBZpdZ.ltrans3.ltrans.o
+ .srodata.stderr
+                0x10358d18        0x4 ../musl/lib/libc.a(stderr.o)
+                0x10358d18                stderr
+ .srodata.__stdio_ofl_lockptr
+                0x10358d1c        0x4 ../musl/lib/libc.a(ofl.o)
+                0x10358d1c                __stdio_ofl_lockptr
+                0x10358d20                        . = ALIGN (0x10)
+                0x10358d20                        __osdata_rodata_vma_end = .
+                0x10358d20                        __osdata_data_vma = .
+ *(.data*)
+ .data          0x10358d20       0x24 /tmp/ccCBZpdZ.ltrans1.ltrans.o
+                0x10358d20                io.lto_priv.0
+ .data.vfs_cwd  0x10358d44      0x100 bld/gb-rtcrelease001b/kernel/syscall.o
+ *fill*         0x10358e44        0x4 
+ .data.__stderr_FILE
+                0x10358e48       0x90 ../musl/lib/libc.a(stderr.o)
+                0x10358e48                __stderr_FILE
+ *(.sdata*)
+ .sdata         0x10358ed8       0x38 /tmp/ccCBZpdZ.ltrans0.ltrans.o
+                0x10358edc                vid_display_mode.lto_priv.0
+                0x10358f00                g_cpu_freq_hz
+ .sdata         0x10358f10        0x4 /tmp/ccCBZpdZ.ltrans1.ltrans.o
+ .sdata.io_cache_mru
+                0x10358f14        0x4 bld/gb-rtcrelease001b/kernel/syscall.o
+ .sdata.sigalrm_div
+                0x10358f18        0x4 bld/gb-rtcrelease001b/kernel/syscall.o
+ .sdata.timer_cb_div
+                0x10358f1c        0x4 bld/gb-rtcrelease001b/kernel/syscall.o
+ .sdata.__stderr_used
+                0x10358f20        0x4 ../musl/lib/libc.a(stderr.o)
+                0x10358f20                __stderr_used
+                0x10358f24                        . = ALIGN (0x4)
+                0x10358f24                        __osdata_data_vma_end = .
+                0x10358f24                        __osdata_vma_end = .
+                0x10320000                        __os_load_addr = __os_entry
+                0x00034190                        __os_text_size = (__text_end - __text_start)
+                0x00038f24                        __os_copy_size = (__osdata_vma_end - __osdata_vma)
+                0x10320000                        __osdata_init_vma_start = __osdata_vma
+                0x00038f24                        __osdata_init_size = (__osdata_vma_end - __osdata_vma)
+
+.app_fastdata   0x10358f24      0x408
+ .app_fastdata  0x10358f24      0x408 /tmp/ccCBZpdZ.ltrans0.ltrans.o
+
+.sd122_nocache
+ *(.sd122_nocache)
+
+.os_bss         0x10359340    0x73080
+                0x10359340                        . = ALIGN (0x4)
+                0x10359340                        __os_bss_start = .
+ *(.bss*)
+ .bss           0x10359340    0x1df58 /tmp/ccCBZpdZ.ltrans0.ltrans.o
+                0x10359400                group_shadow.lto_priv.0
+                0x10359420                generation_shadow.lto_priv.0
+                0x103594a0                ctrl_shadow.lto_priv.0
+                0x103594c0                priority_shadow.lto_priv.0
+                0x10359b60                snac_state.lto_priv.0
+                0x10359b7c                of_input_states
+                0x10359bac                keyboard_state.lto_priv.0
+                0x10359c3c                async_state.lto_priv.0
+                0x10359c70                ended_queue.lto_priv.0
+                0x1035add0                hid_mouse.lto_priv.0
+                0x1035adf4                pal_shadow.lto_priv.0
+                0x1035b204                tg_block_crc.lto_priv.0
+                0x1035b604                app_elf_name.lto_priv.0
+                0x1035b910                app_argv.lto_priv.0
+                0x1035b994                config_entries.lto_priv.0
+ *fill*         0x10377298        0x8 
+ .bss           0x103772a0    0x22570 /tmp/ccCBZpdZ.ltrans1.ltrans.o
+                0x103772a0                job.lto_priv.0
+                0x103772d0                captured_board.lto_priv.0
+                0x1037786c                gb175_active_plan.lto_priv.0
+                0x10377880                _gm_.lto_priv.0
+                0x10377a70                observed_bank.lto_priv.0
+                0x10377bc8                captured_bank.lto_priv.0
+                0x10377d20                bank_probe_scratch.lto_priv.0
+                0x10377e10                gb175_scratch.lto_priv.0
+                0x10378010                scratch.lto_priv.0
+ *fill*         0x10399810       0x10 
+ .bss           0x10399820    0x24b60 /tmp/ccCBZpdZ.ltrans2.ltrans.o
+                0x10399830                stream_job.lto_priv.0
+                0x103998e0                eeprom139_small.lto_priv.0
+                0x1039c380                eeprom139_large.lto_priv.0
+ .bss           0x103be380      0x200 /tmp/ccCBZpdZ.ltrans3.ltrans.o
+ .bss.mmap_slots
+                0x103be580     0xc000 bld/gb-rtcrelease001b/kernel/syscall.o
+ .bss.vfs_mounts
+                0x103ca580      0x160 bld/gb-rtcrelease001b/kernel/syscall.o
+ .bss.save_size_known
+                0x103ca6e0       0x14 bld/gb-rtcrelease001b/kernel/syscall.o
+ .bss.save_size_cache
+                0x103ca6f4       0x50 bld/gb-rtcrelease001b/kernel/syscall.o
+ .bss.file_slots
+                0x103ca744      0x700 bld/gb-rtcrelease001b/kernel/syscall.o
+ .bss.io_cache_hint
+                0x103cae44      0x100 bld/gb-rtcrelease001b/kernel/syscall.o
+ .bss.io_cache  0x103caf44      0x800 bld/gb-rtcrelease001b/kernel/syscall.o
+ *fill*         0x103cb744        0x4 
+ .bss.fd_table  0x103cb748      0xa00 bld/gb-rtcrelease001b/kernel/syscall.o
+ .bss.__libc    0x103cc148       0x38 ../musl/lib/libc.a(libc.o)
+                0x103cc148                __libc
+ *(.sbss*)
+ .sbss          0x103cc180      0x178 /tmp/ccCBZpdZ.ltrans0.ltrans.o
+                0x103cc180                tg_valid.lto_priv.0
+                0x103cc184                tg_nblocks.lto_priv.0
+                0x103cc188                fail_got.lto_priv.0
+                0x103cc18c                fail_want.lto_priv.0
+                0x103cc190                fail_addr.lto_priv.0
+                0x103cc194                fail_region.lto_priv.0
+                0x103cc198                config_entry_count.lto_priv.0
+                0x103cc1a8                snac_last_poll_cycles.lto_priv.0
+                0x103cc1b4                snac_poll_busy.lto_priv.0
+                0x103cc1b8                snac_gpio_out_shadow.lto_priv.0
+                0x103cc1f8                idle_hook.lto_priv.0
+                0x103cc20c                snac_active_flag.lto_priv.0
+                0x103cc220                snac_hw_active_flag.lto_priv.0
+                0x103cc234                pal_uploading.lto_priv.0
+                0x103cc238                pal_dirty.lto_priv.0
+                0x103cc2cc                sw_active_mask.lto_priv.0
+                0x103cc2d0                sw_irq_pending.lto_priv.0
+                0x103cc2d4                sw_irq_doorbell.lto_priv.0
+                0x103cc2d8                mixer_initialized.lto_priv.0
+                0x103cc2dc                ended_queue_overflows.lto_priv.0
+                0x103cc2e0                ended_legacy_latch.lto_priv.0
+                0x103cc2e4                ended_count.lto_priv.0
+                0x103cc2e5                ended_tail.lto_priv.0
+                0x103cc2e6                ended_head.lto_priv.0
+                0x103cc2e8                active_shadow.lto_priv.0
+                0x103cc2f0                of_mixer_use_sw
+ .sbss          0x103cc2f8       0x45 /tmp/ccCBZpdZ.ltrans1.ltrans.o
+                0x103cc2fc                gb180_active.lto_priv.0
+                0x103cc304                gb177_active.lto_priv.0
+                0x103cc308                active_board.lto_priv.0
+                0x103cc30c                active_bank.lto_priv.0
+                0x103cc310                bus_kind.lto_priv.0
+                0x103cc31c                capture_epoch.lto_priv.0
+                0x103cc320                private_owned.lto_priv.0
+                0x103cc324                mapper_kind.lto_priv.0
+                0x103cc334                stream_active.lto_priv.0
+                0x103cc338                job_token.lto_priv.0
+                0x103cc33c                busy.lto_priv.0
+ *fill*         0x103cc33d        0x3 
+ .sbss          0x103cc340       0x30 /tmp/ccCBZpdZ.ltrans2.ltrans.o
+                0x103cc360                programmed_to.lto_priv.0
+                0x103cc364                erase_end.lto_priv.0
+                0x103cc368                image_bytes.lto_priv.0
+ .sbss.warned_slots_full.0
+                0x103cc370        0x4 bld/gb-rtcrelease001b/kernel/syscall.o
+ .sbss.mmap_slots_used
+                0x103cc374        0x4 bld/gb-rtcrelease001b/kernel/syscall.o
+ .sbss.vfs_mount_count
+                0x103cc378        0x4 bld/gb-rtcrelease001b/kernel/syscall.o
+ .sbss.mmap_bottom
+                0x103cc37c        0x4 bld/gb-rtcrelease001b/kernel/syscall.o
+ .sbss.brk_base
+                0x103cc380        0x4 bld/gb-rtcrelease001b/kernel/syscall.o
+ .sbss.current_brk
+                0x103cc384        0x4 bld/gb-rtcrelease001b/kernel/syscall.o
+                0x103cc384                current_brk
+ .sbss.file_slot_count
+                0x103cc388        0x4 bld/gb-rtcrelease001b/kernel/syscall.o
+ .sbss.io_lru_counter
+                0x103cc38c        0x4 bld/gb-rtcrelease001b/kernel/syscall.o
+ .sbss.sigalrm_cnt
+                0x103cc390        0x4 bld/gb-rtcrelease001b/kernel/syscall.o
+ .sbss.timer_cb_cnt
+                0x103cc394        0x4 bld/gb-rtcrelease001b/kernel/syscall.o
+ .sbss.timer_callback_ptr
+                0x103cc398        0x4 bld/gb-rtcrelease001b/kernel/syscall.o
+                0x103cc398                timer_callback_ptr
+ .sbss.sigalrm_handler
+                0x103cc39c        0x4 bld/gb-rtcrelease001b/kernel/syscall.o
+ .sbss.link_rx_cb
+                0x103cc3a0        0x4 bld/gb-rtcrelease001b/kernel/irq.o
+ .sbss.vsync_cb
+                0x103cc3a4        0x4 bld/gb-rtcrelease001b/kernel/irq.o
+ .sbss.external_cb
+                0x103cc3a8        0x4 bld/gb-rtcrelease001b/kernel/irq.o
+ .sbss.buf      0x103cc3ac        0x8 ../musl/lib/libc.a(stderr.o)
+ .sbss.dummy_file
+                0x103cc3b4        0x4 ../musl/lib/libc.a(__stdio_exit.o)
+                0x103cc3b4                __stdout_used
+                0x103cc3b4                __stdin_used
+ .sbss.ofl_lock
+                0x103cc3b8        0x4 ../musl/lib/libc.a(ofl.o)
+ .sbss.ofl_head
+                0x103cc3bc        0x4 ../musl/lib/libc.a(ofl.o)
+ *(COMMON)
+                0x103cc3c0                        . = ALIGN (0x4)
+                0x103cc3c0                        __os_bss_end = .
+                0x103cc3c0                        __os_heap_start = __os_bss_end
+                0x13c00000                        __save_region = 0x13c00000
+                0x13f80000                        __runtime_stack_top = 0x13f80000
+                0x00080000                        __runtime_stack_size = 0x80000
+                0x13f00000                        __runtime_stack_bottom = (__runtime_stack_top - __runtime_stack_size)
+                0x00008000                        __stack_top = (ORIGIN (BRAM) + LENGTH (BRAM))
+                0x00004000                        __app_bram_start = 0x4000
+                0x00007800                        __app_bram_end = 0x7800
+                [!provide]                        PROVIDE (_start_addr = ORIGIN (BRAM))
+                0x00008000                        PROVIDE (_stack_top = __stack_top)
+                0x00002f00                        PROVIDE (_bss_start = __bss_start)
+                0x000031c0                        PROVIDE (_bss_end = __bss_end)
+                0x10359340                        PROVIDE (_os_bss_start = __os_bss_start)
+                0x103cc3c0                        PROVIDE (_os_bss_end = __os_bss_end)
+                0x10320000                        PROVIDE (_os_load_addr = __os_load_addr)
+                [!provide]                        PROVIDE (_os_text_size = __os_text_size)
+                0x00038f24                        PROVIDE (_os_copy_size = __os_copy_size)
+                0x10320000                        PROVIDE (_osdata_init_vma_start = __osdata_init_vma_start)
+                [!provide]                        PROVIDE (_osdata_init_size = __osdata_init_size)
+                0x13f80000                        PROVIDE (_runtime_stack_top = __runtime_stack_top)
+                [!provide]                        PROVIDE (__app_load_base = __app_load_base)
+                [!provide]                        PROVIDE (_app_bram_start = __app_bram_start)
+                [!provide]                        PROVIDE (_app_bram_end = __app_bram_end)
+                0x00000001                        ASSERT ((__fastdata_end <= __app_bram_start), OS BRAM overflow: OS sections exceed 8KB reserved region)
+                0x00000001                        ASSERT ((__fastdata_end <= (__stack_top - 0x2000)), BRAM overflow: insufficient stack headroom)
+                0x00000001                        ASSERT ((__os_bss_end <= (ORIGIN (OSDATA) + LENGTH (OSDATA))), OS text+rodata+data+bss too large: exceeds OSDATA region in SDRAM)
+OUTPUT(bld/gb-rtcrelease001b/firmware.elf elf32-littleriscv)
+
+.comment        0x00000000       0x48
+ .comment       0x00000000       0x48 bld/gb-rtcrelease001b/targets/pocket/boot/boot.o
+                                 0x23 (size before relaxing)
+ .comment       0x00000048       0x23 /tmp/ccCBZpdZ.ltrans0.ltrans.o
+ .comment       0x00000048       0x23 /tmp/ccCBZpdZ.ltrans1.ltrans.o
+ .comment       0x00000048       0x23 /tmp/ccCBZpdZ.ltrans2.ltrans.o
+ .comment       0x00000048       0x23 /tmp/ccCBZpdZ.ltrans3.ltrans.o
+ .comment       0x00000048       0x23 bld/gb-rtcrelease001b/api/of_smp_tables.o
+ .comment       0x00000048       0x23 bld/gb-rtcrelease001b/kernel/syscall.o
+ .comment       0x00000048       0x23 bld/gb-rtcrelease001b/kernel/irq.o
+ .comment       0x00000048       0x23 /usr/lib/gcc/riscv64-unknown-elf/13.2.0/rv32imafc/ilp32f/libgcc.a(_lshrdi3.o)
+ .comment       0x00000048       0x23 /usr/lib/gcc/riscv64-unknown-elf/13.2.0/rv32imafc/ilp32f/libgcc.a(_divdi3.o)
+ .comment       0x00000048       0x23 /usr/lib/gcc/riscv64-unknown-elf/13.2.0/rv32imafc/ilp32f/libgcc.a(_udivdi3.o)
+ .comment       0x00000048       0x23 /usr/lib/gcc/riscv64-unknown-elf/13.2.0/rv32imafc/ilp32f/libgcc.a(_clz.o)
+ .comment       0x00000048       0x23 /usr/lib/gcc/riscv64-unknown-elf/13.2.0/rv32imafc/ilp32f/libgcc.a(_ashldi3.o)
+ .comment       0x00000048       0x23 /usr/lib/gcc/riscv64-unknown-elf/13.2.0/rv32imafc/ilp32f/libgcc.a(_moddi3.o)
+ .comment       0x00000048       0x23 /usr/lib/gcc/riscv64-unknown-elf/13.2.0/rv32imafc/ilp32f/libgcc.a(_umoddi3.o)
+ .comment       0x00000048       0x23 /usr/lib/gcc/riscv64-unknown-elf/13.2.0/rv32imafc/ilp32f/libgcc.a(addtf3.o)
+ .comment       0x00000048       0x23 /usr/lib/gcc/riscv64-unknown-elf/13.2.0/rv32imafc/ilp32f/libgcc.a(eqtf2.o)
+ .comment       0x00000048       0x23 /usr/lib/gcc/riscv64-unknown-elf/13.2.0/rv32imafc/ilp32f/libgcc.a(multf3.o)
+ .comment       0x00000048       0x23 /usr/lib/gcc/riscv64-unknown-elf/13.2.0/rv32imafc/ilp32f/libgcc.a(subtf3.o)
+ .comment       0x00000048       0x23 /usr/lib/gcc/riscv64-unknown-elf/13.2.0/rv32imafc/ilp32f/libgcc.a(fixtfsi.o)
+ .comment       0x00000048       0x23 /usr/lib/gcc/riscv64-unknown-elf/13.2.0/rv32imafc/ilp32f/libgcc.a(fixunstfsi.o)
+ .comment       0x00000048       0x23 /usr/lib/gcc/riscv64-unknown-elf/13.2.0/rv32imafc/ilp32f/libgcc.a(floatsitf.o)
+ .comment       0x00000048       0x23 /usr/lib/gcc/riscv64-unknown-elf/13.2.0/rv32imafc/ilp32f/libgcc.a(floatunsitf.o)
+ .comment       0x00000048       0x23 /usr/lib/gcc/riscv64-unknown-elf/13.2.0/rv32imafc/ilp32f/libgcc.a(extenddftf2.o)
+ .comment       0x00000048       0x23 /usr/lib/gcc/riscv64-unknown-elf/13.2.0/rv32imafc/ilp32f/libgcc.a(_clzsi2.o)
+ .comment       0x00000048       0x27 ../musl/lib/libc.a(fprintf.o)
+ .comment       0x00000048       0x27 ../musl/lib/libc.a(snprintf.o)
+ .comment       0x00000048       0x27 ../musl/lib/libc.a(stderr.o)
+ .comment       0x00000048       0x27 ../musl/lib/libc.a(vfprintf.o)
+ .comment       0x00000048       0x27 ../musl/lib/libc.a(vsnprintf.o)
+ .comment       0x00000048       0x27 ../musl/lib/libc.a(memcmp.o)
+ .comment       0x00000048       0x27 ../musl/lib/libc.a(strcmp.o)
+ .comment       0x00000048       0x27 ../musl/lib/libc.a(strncmp.o)
+ .comment       0x00000048       0x27 ../musl/lib/libc.a(strncpy.o)
+ .comment       0x00000048       0x27 ../musl/lib/libc.a(strnlen.o)
+ .comment       0x00000048       0x27 ../musl/lib/libc.a(__errno_location.o)
+ .comment       0x00000048       0x27 ../musl/lib/libc.a(strerror.o)
+ .comment       0x00000048       0x27 ../musl/lib/libc.a(__lctrans.o)
+ .comment       0x00000048       0x27 ../musl/lib/libc.a(__fpclassifyl.o)
+ .comment       0x00000048       0x27 ../musl/lib/libc.a(__signbitl.o)
+ .comment       0x00000048       0x27 ../musl/lib/libc.a(frexpl.o)
+ .comment       0x00000048       0x27 ../musl/lib/libc.a(wctomb.o)
+ .comment       0x00000048       0x27 ../musl/lib/libc.a(__lockfile.o)
+ .comment       0x00000048       0x27 ../musl/lib/libc.a(__stdio_close.o)
+ .comment       0x00000048       0x27 ../musl/lib/libc.a(__stdio_seek.o)
+ .comment       0x00000048       0x27 ../musl/lib/libc.a(__stdio_write.o)
+ .comment       0x00000048       0x27 ../musl/lib/libc.a(__towrite.o)
+ .comment       0x00000048       0x27 ../musl/lib/libc.a(fwrite.o)
+ .comment       0x00000048       0x27 ../musl/lib/libc.a(memchr.o)
+ .comment       0x00000048       0x27 ../musl/lib/libc.a(stpncpy.o)
+ .comment       0x00000048       0x27 ../musl/lib/libc.a(lseek.o)
+ .comment       0x00000048       0x27 ../musl/lib/libc.a(syscall_ret.o)
+ .comment       0x00000048       0x27 ../musl/lib/libc.a(wcrtomb.o)
+ .comment       0x00000048       0x27 ../musl/lib/libc.a(__stdio_exit.o)
+ .comment       0x00000048       0x27 ../musl/lib/libc.a(ofl.o)
+ .comment       0x00000048       0x27 ../musl/lib/libc.a(__lock.o)
+ .comment       0x00000048       0x27 ../musl/lib/libc.a(libc.o)
+
+.riscv.attributes
+                0x00000000       0x67
+ .riscv.attributes
+                0x00000000       0x46 bld/gb-rtcrelease001b/targets/pocket/boot/boot.o
+ .riscv.attributes
+                0x00000046       0x46 /tmp/ccCBZpdZ.ltrans0.ltrans.o
+ .riscv.attributes
+                0x0000008c       0x46 /tmp/ccCBZpdZ.ltrans1.ltrans.o
+ .riscv.attributes
+                0x000000d2       0x42 /tmp/ccCBZpdZ.ltrans2.ltrans.o
+ .riscv.attributes
+                0x00000114       0x46 /tmp/ccCBZpdZ.ltrans3.ltrans.o
+ .riscv.attributes
+                0x0000015a       0x42 bld/gb-rtcrelease001b/api/of_smp_tables.o
+ .riscv.attributes
+                0x0000019c       0x46 bld/gb-rtcrelease001b/kernel/syscall.o
+ .riscv.attributes
+                0x000001e2       0x46 bld/gb-rtcrelease001b/kernel/irq.o
+ .riscv.attributes
+                0x00000228       0x44 bld/gb-rtcrelease001b/targets/pocket/boot/start.o
+ .riscv.attributes
+                0x0000026c       0x40 bld/gb-rtcrelease001b/hal/fast_mem.o
+ .riscv.attributes
+                0x000002ac       0x42 /usr/lib/gcc/riscv64-unknown-elf/13.2.0/rv32imafc/ilp32f/libgcc.a(_lshrdi3.o)
+ .riscv.attributes
+                0x000002ee       0x42 /usr/lib/gcc/riscv64-unknown-elf/13.2.0/rv32imafc/ilp32f/libgcc.a(_divdi3.o)
+ .riscv.attributes
+                0x00000330       0x42 /usr/lib/gcc/riscv64-unknown-elf/13.2.0/rv32imafc/ilp32f/libgcc.a(_udivdi3.o)
+ .riscv.attributes
+                0x00000372       0x42 /usr/lib/gcc/riscv64-unknown-elf/13.2.0/rv32imafc/ilp32f/libgcc.a(_clz.o)
+ .riscv.attributes
+                0x000003b4       0x42 /usr/lib/gcc/riscv64-unknown-elf/13.2.0/rv32imafc/ilp32f/libgcc.a(_ashldi3.o)
+ .riscv.attributes
+                0x000003f6       0x42 /usr/lib/gcc/riscv64-unknown-elf/13.2.0/rv32imafc/ilp32f/libgcc.a(_moddi3.o)
+ .riscv.attributes
+                0x00000438       0x42 /usr/lib/gcc/riscv64-unknown-elf/13.2.0/rv32imafc/ilp32f/libgcc.a(_umoddi3.o)
+ .riscv.attributes
+                0x0000047a       0x46 /usr/lib/gcc/riscv64-unknown-elf/13.2.0/rv32imafc/ilp32f/libgcc.a(addtf3.o)
+ .riscv.attributes
+                0x000004c0       0x46 /usr/lib/gcc/riscv64-unknown-elf/13.2.0/rv32imafc/ilp32f/libgcc.a(eqtf2.o)
+ .riscv.attributes
+                0x00000506       0x46 /usr/lib/gcc/riscv64-unknown-elf/13.2.0/rv32imafc/ilp32f/libgcc.a(multf3.o)
+ .riscv.attributes
+                0x0000054c       0x46 /usr/lib/gcc/riscv64-unknown-elf/13.2.0/rv32imafc/ilp32f/libgcc.a(subtf3.o)
+ .riscv.attributes
+                0x00000592       0x46 /usr/lib/gcc/riscv64-unknown-elf/13.2.0/rv32imafc/ilp32f/libgcc.a(fixtfsi.o)
+ .riscv.attributes
+                0x000005d8       0x46 /usr/lib/gcc/riscv64-unknown-elf/13.2.0/rv32imafc/ilp32f/libgcc.a(fixunstfsi.o)
+ .riscv.attributes
+                0x0000061e       0x42 /usr/lib/gcc/riscv64-unknown-elf/13.2.0/rv32imafc/ilp32f/libgcc.a(floatsitf.o)
+ .riscv.attributes
+                0x00000660       0x42 /usr/lib/gcc/riscv64-unknown-elf/13.2.0/rv32imafc/ilp32f/libgcc.a(floatunsitf.o)
+ .riscv.attributes
+                0x000006a2       0x46 /usr/lib/gcc/riscv64-unknown-elf/13.2.0/rv32imafc/ilp32f/libgcc.a(extenddftf2.o)
+ .riscv.attributes
+                0x000006e8       0x42 /usr/lib/gcc/riscv64-unknown-elf/13.2.0/rv32imafc/ilp32f/libgcc.a(_clzsi2.o)
+ .riscv.attributes
+                0x0000072a       0x63 ../musl/lib/libc.a(fprintf.o)
+ .riscv.attributes
+                0x0000078d       0x63 ../musl/lib/libc.a(snprintf.o)
+ .riscv.attributes
+                0x000007f0       0x63 ../musl/lib/libc.a(stderr.o)
+ .riscv.attributes
+                0x00000853       0x63 ../musl/lib/libc.a(vfprintf.o)
+ .riscv.attributes
+                0x000008b6       0x63 ../musl/lib/libc.a(vsnprintf.o)
+ .riscv.attributes
+                0x00000919       0x63 ../musl/lib/libc.a(memcmp.o)
+ .riscv.attributes
+                0x0000097c       0x63 ../musl/lib/libc.a(strcmp.o)
+ .riscv.attributes
+                0x000009df       0x63 ../musl/lib/libc.a(strncmp.o)
+ .riscv.attributes
+                0x00000a42       0x63 ../musl/lib/libc.a(strncpy.o)
+ .riscv.attributes
+                0x00000aa5       0x63 ../musl/lib/libc.a(strnlen.o)
+ .riscv.attributes
+                0x00000b08       0x63 ../musl/lib/libc.a(__errno_location.o)
+ .riscv.attributes
+                0x00000b6b       0x63 ../musl/lib/libc.a(strerror.o)
+ .riscv.attributes
+                0x00000bce       0x63 ../musl/lib/libc.a(__lctrans.o)
+ .riscv.attributes
+                0x00000c31       0x63 ../musl/lib/libc.a(__fpclassifyl.o)
+ .riscv.attributes
+                0x00000c94       0x63 ../musl/lib/libc.a(__signbitl.o)
+ .riscv.attributes
+                0x00000cf7       0x63 ../musl/lib/libc.a(frexpl.o)
+ .riscv.attributes
+                0x00000d5a       0x63 ../musl/lib/libc.a(wctomb.o)
+ .riscv.attributes
+                0x00000dbd       0x63 ../musl/lib/libc.a(__lockfile.o)
+ .riscv.attributes
+                0x00000e20       0x63 ../musl/lib/libc.a(__stdio_close.o)
+ .riscv.attributes
+                0x00000e83       0x63 ../musl/lib/libc.a(__stdio_seek.o)
+ .riscv.attributes
+                0x00000ee6       0x63 ../musl/lib/libc.a(__stdio_write.o)
+ .riscv.attributes
+                0x00000f49       0x63 ../musl/lib/libc.a(__towrite.o)
+ .riscv.attributes
+                0x00000fac       0x63 ../musl/lib/libc.a(fwrite.o)
+ .riscv.attributes
+                0x0000100f       0x63 ../musl/lib/libc.a(memchr.o)
+ .riscv.attributes
+                0x00001072       0x63 ../musl/lib/libc.a(stpncpy.o)
+ .riscv.attributes
+                0x000010d5       0x63 ../musl/lib/libc.a(lseek.o)
+ .riscv.attributes
+                0x00001138       0x63 ../musl/lib/libc.a(syscall_ret.o)
+ .riscv.attributes
+                0x0000119b       0x63 ../musl/lib/libc.a(wcrtomb.o)
+ .riscv.attributes
+                0x000011fe       0x63 ../musl/lib/libc.a(__stdio_exit.o)
+ .riscv.attributes
+                0x00001261       0x63 ../musl/lib/libc.a(ofl.o)
+ .riscv.attributes
+                0x000012c4       0x63 ../musl/lib/libc.a(__lock.o)
+ .riscv.attributes
+                0x00001327       0x63 ../musl/lib/libc.a(libc.o)
+
+.note.GNU-stack
+                0x00000000        0x0
+ .note.GNU-stack
+                0x00000000        0x0 ../musl/lib/libc.a(fprintf.o)
+ .note.GNU-stack
+                0x00000000        0x0 ../musl/lib/libc.a(snprintf.o)
+ .note.GNU-stack
+                0x00000000        0x0 ../musl/lib/libc.a(stderr.o)
+ .note.GNU-stack
+                0x00000000        0x0 ../musl/lib/libc.a(vfprintf.o)
+ .note.GNU-stack
+                0x00000000        0x0 ../musl/lib/libc.a(vsnprintf.o)
+ .note.GNU-stack
+                0x00000000        0x0 ../musl/lib/libc.a(memcmp.o)
+ .note.GNU-stack
+                0x00000000        0x0 ../musl/lib/libc.a(strcmp.o)
+ .note.GNU-stack
+                0x00000000        0x0 ../musl/lib/libc.a(strncmp.o)
+ .note.GNU-stack
+                0x00000000        0x0 ../musl/lib/libc.a(strncpy.o)
+ .note.GNU-stack
+                0x00000000        0x0 ../musl/lib/libc.a(strnlen.o)
+ .note.GNU-stack
+                0x00000000        0x0 ../musl/lib/libc.a(__errno_location.o)
+ .note.GNU-stack
+                0x00000000        0x0 ../musl/lib/libc.a(strerror.o)
+ .note.GNU-stack
+                0x00000000        0x0 ../musl/lib/libc.a(__lctrans.o)
+ .note.GNU-stack
+                0x00000000        0x0 ../musl/lib/libc.a(__fpclassifyl.o)
+ .note.GNU-stack
+                0x00000000        0x0 ../musl/lib/libc.a(__signbitl.o)
+ .note.GNU-stack
+                0x00000000        0x0 ../musl/lib/libc.a(frexpl.o)
+ .note.GNU-stack
+                0x00000000        0x0 ../musl/lib/libc.a(wctomb.o)
+ .note.GNU-stack
+                0x00000000        0x0 ../musl/lib/libc.a(__lockfile.o)
+ .note.GNU-stack
+                0x00000000        0x0 ../musl/lib/libc.a(__stdio_close.o)
+ .note.GNU-stack
+                0x00000000        0x0 ../musl/lib/libc.a(__stdio_seek.o)
+ .note.GNU-stack
+                0x00000000        0x0 ../musl/lib/libc.a(__stdio_write.o)
+ .note.GNU-stack
+                0x00000000        0x0 ../musl/lib/libc.a(__towrite.o)
+ .note.GNU-stack
+                0x00000000        0x0 ../musl/lib/libc.a(fwrite.o)
+ .note.GNU-stack
+                0x00000000        0x0 ../musl/lib/libc.a(memchr.o)
+ .note.GNU-stack
+                0x00000000        0x0 ../musl/lib/libc.a(stpncpy.o)
+ .note.GNU-stack
+                0x00000000        0x0 ../musl/lib/libc.a(lseek.o)
+ .note.GNU-stack
+                0x00000000        0x0 ../musl/lib/libc.a(syscall_ret.o)
+ .note.GNU-stack
+                0x00000000        0x0 ../musl/lib/libc.a(wcrtomb.o)
+ .note.GNU-stack
+                0x00000000        0x0 ../musl/lib/libc.a(__stdio_exit.o)
+ .note.GNU-stack
+                0x00000000        0x0 ../musl/lib/libc.a(ofl.o)
+ .note.GNU-stack
+                0x00000000        0x0 ../musl/lib/libc.a(__lock.o)
+ .note.GNU-stack
+                0x00000000        0x0 ../musl/lib/libc.a(libc.o)
+
+.debug_info     0x00000000     0x5ff2
+ .debug_info    0x00000000      0x1a1 /usr/lib/gcc/riscv64-unknown-elf/13.2.0/rv32imafc/ilp32f/libgcc.a(_lshrdi3.o)
+ .debug_info    0x000001a1      0x793 /usr/lib/gcc/riscv64-unknown-elf/13.2.0/rv32imafc/ilp32f/libgcc.a(_divdi3.o)
+ .debug_info    0x00000934      0x761 /usr/lib/gcc/riscv64-unknown-elf/13.2.0/rv32imafc/ilp32f/libgcc.a(_udivdi3.o)
+ .debug_info    0x00001095       0xd8 /usr/lib/gcc/riscv64-unknown-elf/13.2.0/rv32imafc/ilp32f/libgcc.a(_clz.o)
+ .debug_info    0x0000116d      0x1a1 /usr/lib/gcc/riscv64-unknown-elf/13.2.0/rv32imafc/ilp32f/libgcc.a(_ashldi3.o)
+ .debug_info    0x0000130e      0x7e8 /usr/lib/gcc/riscv64-unknown-elf/13.2.0/rv32imafc/ilp32f/libgcc.a(_moddi3.o)
+ .debug_info    0x00001af6      0x7b4 /usr/lib/gcc/riscv64-unknown-elf/13.2.0/rv32imafc/ilp32f/libgcc.a(_umoddi3.o)
+ .debug_info    0x000022aa      0xcfe /usr/lib/gcc/riscv64-unknown-elf/13.2.0/rv32imafc/ilp32f/libgcc.a(addtf3.o)
+ .debug_info    0x00002fa8      0x24a /usr/lib/gcc/riscv64-unknown-elf/13.2.0/rv32imafc/ilp32f/libgcc.a(eqtf2.o)
+ .debug_info    0x000031f2     0x1102 /usr/lib/gcc/riscv64-unknown-elf/13.2.0/rv32imafc/ilp32f/libgcc.a(multf3.o)
+ .debug_info    0x000042f4      0xcfe /usr/lib/gcc/riscv64-unknown-elf/13.2.0/rv32imafc/ilp32f/libgcc.a(subtf3.o)
+ .debug_info    0x00004ff2      0x26b /usr/lib/gcc/riscv64-unknown-elf/13.2.0/rv32imafc/ilp32f/libgcc.a(fixtfsi.o)
+ .debug_info    0x0000525d      0x251 /usr/lib/gcc/riscv64-unknown-elf/13.2.0/rv32imafc/ilp32f/libgcc.a(fixunstfsi.o)
+ .debug_info    0x000054ae      0x339 /usr/lib/gcc/riscv64-unknown-elf/13.2.0/rv32imafc/ilp32f/libgcc.a(floatsitf.o)
+ .debug_info    0x000057e7      0x32c /usr/lib/gcc/riscv64-unknown-elf/13.2.0/rv32imafc/ilp32f/libgcc.a(floatunsitf.o)
+ .debug_info    0x00005b13      0x39d /usr/lib/gcc/riscv64-unknown-elf/13.2.0/rv32imafc/ilp32f/libgcc.a(extenddftf2.o)
+ .debug_info    0x00005eb0      0x142 /usr/lib/gcc/riscv64-unknown-elf/13.2.0/rv32imafc/ilp32f/libgcc.a(_clzsi2.o)
+
+.debug_abbrev   0x00000000     0x189a
+ .debug_abbrev  0x00000000      0x10c /usr/lib/gcc/riscv64-unknown-elf/13.2.0/rv32imafc/ilp32f/libgcc.a(_lshrdi3.o)
+ .debug_abbrev  0x0000010c      0x1bf /usr/lib/gcc/riscv64-unknown-elf/13.2.0/rv32imafc/ilp32f/libgcc.a(_divdi3.o)
+ .debug_abbrev  0x000002cb      0x1a6 /usr/lib/gcc/riscv64-unknown-elf/13.2.0/rv32imafc/ilp32f/libgcc.a(_udivdi3.o)
+ .debug_abbrev  0x00000471       0x70 /usr/lib/gcc/riscv64-unknown-elf/13.2.0/rv32imafc/ilp32f/libgcc.a(_clz.o)
+ .debug_abbrev  0x000004e1      0x10c /usr/lib/gcc/riscv64-unknown-elf/13.2.0/rv32imafc/ilp32f/libgcc.a(_ashldi3.o)
+ .debug_abbrev  0x000005ed      0x1ca /usr/lib/gcc/riscv64-unknown-elf/13.2.0/rv32imafc/ilp32f/libgcc.a(_moddi3.o)
+ .debug_abbrev  0x000007b7      0x1aa /usr/lib/gcc/riscv64-unknown-elf/13.2.0/rv32imafc/ilp32f/libgcc.a(_umoddi3.o)
+ .debug_abbrev  0x00000961      0x1e4 /usr/lib/gcc/riscv64-unknown-elf/13.2.0/rv32imafc/ilp32f/libgcc.a(addtf3.o)
+ .debug_abbrev  0x00000b45      0x16b /usr/lib/gcc/riscv64-unknown-elf/13.2.0/rv32imafc/ilp32f/libgcc.a(eqtf2.o)
+ .debug_abbrev  0x00000cb0      0x18f /usr/lib/gcc/riscv64-unknown-elf/13.2.0/rv32imafc/ilp32f/libgcc.a(multf3.o)
+ .debug_abbrev  0x00000e3f      0x1e4 /usr/lib/gcc/riscv64-unknown-elf/13.2.0/rv32imafc/ilp32f/libgcc.a(subtf3.o)
+ .debug_abbrev  0x00001023      0x16d /usr/lib/gcc/riscv64-unknown-elf/13.2.0/rv32imafc/ilp32f/libgcc.a(fixtfsi.o)
+ .debug_abbrev  0x00001190      0x16c /usr/lib/gcc/riscv64-unknown-elf/13.2.0/rv32imafc/ilp32f/libgcc.a(fixunstfsi.o)
+ .debug_abbrev  0x000012fc      0x19f /usr/lib/gcc/riscv64-unknown-elf/13.2.0/rv32imafc/ilp32f/libgcc.a(floatsitf.o)
+ .debug_abbrev  0x0000149b      0x1af /usr/lib/gcc/riscv64-unknown-elf/13.2.0/rv32imafc/ilp32f/libgcc.a(floatunsitf.o)
+ .debug_abbrev  0x0000164a      0x186 /usr/lib/gcc/riscv64-unknown-elf/13.2.0/rv32imafc/ilp32f/libgcc.a(extenddftf2.o)
+ .debug_abbrev  0x000017d0       0xca /usr/lib/gcc/riscv64-unknown-elf/13.2.0/rv32imafc/ilp32f/libgcc.a(_clzsi2.o)
+
+.debug_loclists
+                0x00000000     0xa110
+ .debug_loclists
+                0x00000000       0x6b /usr/lib/gcc/riscv64-unknown-elf/13.2.0/rv32imafc/ilp32f/libgcc.a(_lshrdi3.o)
+ .debug_loclists
+                0x0000006b      0x5ab /usr/lib/gcc/riscv64-unknown-elf/13.2.0/rv32imafc/ilp32f/libgcc.a(_divdi3.o)
+ .debug_loclists
+                0x00000616      0x6ff /usr/lib/gcc/riscv64-unknown-elf/13.2.0/rv32imafc/ilp32f/libgcc.a(_udivdi3.o)
+ .debug_loclists
+                0x00000d15       0x6b /usr/lib/gcc/riscv64-unknown-elf/13.2.0/rv32imafc/ilp32f/libgcc.a(_ashldi3.o)
+ .debug_loclists
+                0x00000d80      0x523 /usr/lib/gcc/riscv64-unknown-elf/13.2.0/rv32imafc/ilp32f/libgcc.a(_moddi3.o)
+ .debug_loclists
+                0x000012a3      0x585 /usr/lib/gcc/riscv64-unknown-elf/13.2.0/rv32imafc/ilp32f/libgcc.a(_umoddi3.o)
+ .debug_loclists
+                0x00001828     0x1c29 /usr/lib/gcc/riscv64-unknown-elf/13.2.0/rv32imafc/ilp32f/libgcc.a(addtf3.o)
+ .debug_loclists
+                0x00003451      0x125 /usr/lib/gcc/riscv64-unknown-elf/13.2.0/rv32imafc/ilp32f/libgcc.a(eqtf2.o)
+ .debug_loclists
+                0x00003576     0x468e /usr/lib/gcc/riscv64-unknown-elf/13.2.0/rv32imafc/ilp32f/libgcc.a(multf3.o)
+ .debug_loclists
+                0x00007c04     0x1c2f /usr/lib/gcc/riscv64-unknown-elf/13.2.0/rv32imafc/ilp32f/libgcc.a(subtf3.o)
+ .debug_loclists
+                0x00009833      0x1b6 /usr/lib/gcc/riscv64-unknown-elf/13.2.0/rv32imafc/ilp32f/libgcc.a(fixtfsi.o)
+ .debug_loclists
+                0x000099e9      0x190 /usr/lib/gcc/riscv64-unknown-elf/13.2.0/rv32imafc/ilp32f/libgcc.a(fixunstfsi.o)
+ .debug_loclists
+                0x00009b79      0x193 /usr/lib/gcc/riscv64-unknown-elf/13.2.0/rv32imafc/ilp32f/libgcc.a(floatsitf.o)
+ .debug_loclists
+                0x00009d0c      0x14c /usr/lib/gcc/riscv64-unknown-elf/13.2.0/rv32imafc/ilp32f/libgcc.a(floatunsitf.o)
+ .debug_loclists
+                0x00009e58      0x274 /usr/lib/gcc/riscv64-unknown-elf/13.2.0/rv32imafc/ilp32f/libgcc.a(extenddftf2.o)
+ .debug_loclists
+                0x0000a0cc       0x44 /usr/lib/gcc/riscv64-unknown-elf/13.2.0/rv32imafc/ilp32f/libgcc.a(_clzsi2.o)
+
+.debug_aranges  0x00000000      0x218
+ .debug_aranges
+                0x00000000       0x20 /usr/lib/gcc/riscv64-unknown-elf/13.2.0/rv32imafc/ilp32f/libgcc.a(_lshrdi3.o)
+ .debug_aranges
+                0x00000020       0x20 /usr/lib/gcc/riscv64-unknown-elf/13.2.0/rv32imafc/ilp32f/libgcc.a(_divdi3.o)
+ .debug_aranges
+                0x00000040       0x20 /usr/lib/gcc/riscv64-unknown-elf/13.2.0/rv32imafc/ilp32f/libgcc.a(_udivdi3.o)
+ .debug_aranges
+                0x00000060       0x18 /usr/lib/gcc/riscv64-unknown-elf/13.2.0/rv32imafc/ilp32f/libgcc.a(_clz.o)
+ .debug_aranges
+                0x00000078       0x20 /usr/lib/gcc/riscv64-unknown-elf/13.2.0/rv32imafc/ilp32f/libgcc.a(_ashldi3.o)
+ .debug_aranges
+                0x00000098       0x20 /usr/lib/gcc/riscv64-unknown-elf/13.2.0/rv32imafc/ilp32f/libgcc.a(_moddi3.o)
+ .debug_aranges
+                0x000000b8       0x20 /usr/lib/gcc/riscv64-unknown-elf/13.2.0/rv32imafc/ilp32f/libgcc.a(_umoddi3.o)
+ .debug_aranges
+                0x000000d8       0x20 /usr/lib/gcc/riscv64-unknown-elf/13.2.0/rv32imafc/ilp32f/libgcc.a(addtf3.o)
+ .debug_aranges
+                0x000000f8       0x20 /usr/lib/gcc/riscv64-unknown-elf/13.2.0/rv32imafc/ilp32f/libgcc.a(eqtf2.o)
+ .debug_aranges
+                0x00000118       0x20 /usr/lib/gcc/riscv64-unknown-elf/13.2.0/rv32imafc/ilp32f/libgcc.a(multf3.o)
+ .debug_aranges
+                0x00000138       0x20 /usr/lib/gcc/riscv64-unknown-elf/13.2.0/rv32imafc/ilp32f/libgcc.a(subtf3.o)
+ .debug_aranges
+                0x00000158       0x20 /usr/lib/gcc/riscv64-unknown-elf/13.2.0/rv32imafc/ilp32f/libgcc.a(fixtfsi.o)
+ .debug_aranges
+                0x00000178       0x20 /usr/lib/gcc/riscv64-unknown-elf/13.2.0/rv32imafc/ilp32f/libgcc.a(fixunstfsi.o)
+ .debug_aranges
+                0x00000198       0x20 /usr/lib/gcc/riscv64-unknown-elf/13.2.0/rv32imafc/ilp32f/libgcc.a(floatsitf.o)
+ .debug_aranges
+                0x000001b8       0x20 /usr/lib/gcc/riscv64-unknown-elf/13.2.0/rv32imafc/ilp32f/libgcc.a(floatunsitf.o)
+ .debug_aranges
+                0x000001d8       0x20 /usr/lib/gcc/riscv64-unknown-elf/13.2.0/rv32imafc/ilp32f/libgcc.a(extenddftf2.o)
+ .debug_aranges
+                0x000001f8       0x20 /usr/lib/gcc/riscv64-unknown-elf/13.2.0/rv32imafc/ilp32f/libgcc.a(_clzsi2.o)
+
+.debug_line     0x00000000     0xcc63
+ .debug_line    0x00000000      0x107 /usr/lib/gcc/riscv64-unknown-elf/13.2.0/rv32imafc/ilp32f/libgcc.a(_lshrdi3.o)
+ .debug_line    0x00000107      0x9ae /usr/lib/gcc/riscv64-unknown-elf/13.2.0/rv32imafc/ilp32f/libgcc.a(_divdi3.o)
+ .debug_line    0x00000ab5      0x905 /usr/lib/gcc/riscv64-unknown-elf/13.2.0/rv32imafc/ilp32f/libgcc.a(_udivdi3.o)
+ .debug_line    0x000013ba       0x3f /usr/lib/gcc/riscv64-unknown-elf/13.2.0/rv32imafc/ilp32f/libgcc.a(_clz.o)
+ .debug_line    0x000013f9      0x107 /usr/lib/gcc/riscv64-unknown-elf/13.2.0/rv32imafc/ilp32f/libgcc.a(_ashldi3.o)
+ .debug_line    0x00001500      0xa4e /usr/lib/gcc/riscv64-unknown-elf/13.2.0/rv32imafc/ilp32f/libgcc.a(_moddi3.o)
+ .debug_line    0x00001f4e      0x963 /usr/lib/gcc/riscv64-unknown-elf/13.2.0/rv32imafc/ilp32f/libgcc.a(_umoddi3.o)
+ .debug_line    0x000028b1     0x31a4 /usr/lib/gcc/riscv64-unknown-elf/13.2.0/rv32imafc/ilp32f/libgcc.a(addtf3.o)
+ .debug_line    0x00005a55      0x32b /usr/lib/gcc/riscv64-unknown-elf/13.2.0/rv32imafc/ilp32f/libgcc.a(eqtf2.o)
+ .debug_line    0x00005d80     0x25da /usr/lib/gcc/riscv64-unknown-elf/13.2.0/rv32imafc/ilp32f/libgcc.a(multf3.o)
+ .debug_line    0x0000835a     0x31fd /usr/lib/gcc/riscv64-unknown-elf/13.2.0/rv32imafc/ilp32f/libgcc.a(subtf3.o)
+ .debug_line    0x0000b557      0x577 /usr/lib/gcc/riscv64-unknown-elf/13.2.0/rv32imafc/ilp32f/libgcc.a(fixtfsi.o)
+ .debug_line    0x0000bace      0x3df /usr/lib/gcc/riscv64-unknown-elf/13.2.0/rv32imafc/ilp32f/libgcc.a(fixunstfsi.o)
+ .debug_line    0x0000bead      0x347 /usr/lib/gcc/riscv64-unknown-elf/13.2.0/rv32imafc/ilp32f/libgcc.a(floatsitf.o)
+ .debug_line    0x0000c1f4      0x327 /usr/lib/gcc/riscv64-unknown-elf/13.2.0/rv32imafc/ilp32f/libgcc.a(floatunsitf.o)
+ .debug_line    0x0000c51b      0x669 /usr/lib/gcc/riscv64-unknown-elf/13.2.0/rv32imafc/ilp32f/libgcc.a(extenddftf2.o)
+ .debug_line    0x0000cb84       0xdf /usr/lib/gcc/riscv64-unknown-elf/13.2.0/rv32imafc/ilp32f/libgcc.a(_clzsi2.o)
+
+.debug_str      0x00000000      0x936
+ .debug_str     0x00000000      0x936 /usr/lib/gcc/riscv64-unknown-elf/13.2.0/rv32imafc/ilp32f/libgcc.a(_lshrdi3.o)
+                                0x1d2 (size before relaxing)
+ .debug_str     0x00000936      0x247 /usr/lib/gcc/riscv64-unknown-elf/13.2.0/rv32imafc/ilp32f/libgcc.a(_divdi3.o)
+ .debug_str     0x00000936      0x248 /usr/lib/gcc/riscv64-unknown-elf/13.2.0/rv32imafc/ilp32f/libgcc.a(_udivdi3.o)
+ .debug_str     0x00000936      0x195 /usr/lib/gcc/riscv64-unknown-elf/13.2.0/rv32imafc/ilp32f/libgcc.a(_clz.o)
+ .debug_str     0x00000936      0x1d2 /usr/lib/gcc/riscv64-unknown-elf/13.2.0/rv32imafc/ilp32f/libgcc.a(_ashldi3.o)
+ .debug_str     0x00000936      0x247 /usr/lib/gcc/riscv64-unknown-elf/13.2.0/rv32imafc/ilp32f/libgcc.a(_moddi3.o)
+ .debug_str     0x00000936      0x248 /usr/lib/gcc/riscv64-unknown-elf/13.2.0/rv32imafc/ilp32f/libgcc.a(_umoddi3.o)
+ .debug_str     0x00000936      0x43d /usr/lib/gcc/riscv64-unknown-elf/13.2.0/rv32imafc/ilp32f/libgcc.a(addtf3.o)
+ .debug_str     0x00000936      0x1b2 /usr/lib/gcc/riscv64-unknown-elf/13.2.0/rv32imafc/ilp32f/libgcc.a(eqtf2.o)
+ .debug_str     0x00000936      0x544 /usr/lib/gcc/riscv64-unknown-elf/13.2.0/rv32imafc/ilp32f/libgcc.a(multf3.o)
+ .debug_str     0x00000936      0x43d /usr/lib/gcc/riscv64-unknown-elf/13.2.0/rv32imafc/ilp32f/libgcc.a(subtf3.o)
+ .debug_str     0x00000936      0x218 /usr/lib/gcc/riscv64-unknown-elf/13.2.0/rv32imafc/ilp32f/libgcc.a(fixtfsi.o)
+ .debug_str     0x00000936      0x214 /usr/lib/gcc/riscv64-unknown-elf/13.2.0/rv32imafc/ilp32f/libgcc.a(fixunstfsi.o)
+ .debug_str     0x00000936      0x2e6 /usr/lib/gcc/riscv64-unknown-elf/13.2.0/rv32imafc/ilp32f/libgcc.a(floatsitf.o)
+ .debug_str     0x00000936      0x2e1 /usr/lib/gcc/riscv64-unknown-elf/13.2.0/rv32imafc/ilp32f/libgcc.a(floatunsitf.o)
+ .debug_str     0x00000936      0x231 /usr/lib/gcc/riscv64-unknown-elf/13.2.0/rv32imafc/ilp32f/libgcc.a(extenddftf2.o)
+ .debug_str     0x00000936      0x1b2 /usr/lib/gcc/riscv64-unknown-elf/13.2.0/rv32imafc/ilp32f/libgcc.a(_clzsi2.o)
+
+.debug_line_str
+                0x00000000      0x2fa
+ .debug_line_str
+                0x00000000      0x2fa /usr/lib/gcc/riscv64-unknown-elf/13.2.0/rv32imafc/ilp32f/libgcc.a(_lshrdi3.o)
+                                0x150 (size before relaxing)
+ .debug_line_str
+                0x000002fa      0x150 /usr/lib/gcc/riscv64-unknown-elf/13.2.0/rv32imafc/ilp32f/libgcc.a(_divdi3.o)
+ .debug_line_str
+                0x000002fa      0x150 /usr/lib/gcc/riscv64-unknown-elf/13.2.0/rv32imafc/ilp32f/libgcc.a(_udivdi3.o)
+ .debug_line_str
+                0x000002fa      0x150 /usr/lib/gcc/riscv64-unknown-elf/13.2.0/rv32imafc/ilp32f/libgcc.a(_clz.o)
+ .debug_line_str
+                0x000002fa      0x150 /usr/lib/gcc/riscv64-unknown-elf/13.2.0/rv32imafc/ilp32f/libgcc.a(_ashldi3.o)
+ .debug_line_str
+                0x000002fa      0x150 /usr/lib/gcc/riscv64-unknown-elf/13.2.0/rv32imafc/ilp32f/libgcc.a(_moddi3.o)
+ .debug_line_str
+                0x000002fa      0x150 /usr/lib/gcc/riscv64-unknown-elf/13.2.0/rv32imafc/ilp32f/libgcc.a(_umoddi3.o)
+ .debug_line_str
+                0x000002fa      0x165 /usr/lib/gcc/riscv64-unknown-elf/13.2.0/rv32imafc/ilp32f/libgcc.a(addtf3.o)
+ .debug_line_str
+                0x000002fa      0x167 /usr/lib/gcc/riscv64-unknown-elf/13.2.0/rv32imafc/ilp32f/libgcc.a(eqtf2.o)
+ .debug_line_str
+                0x000002fa      0x164 /usr/lib/gcc/riscv64-unknown-elf/13.2.0/rv32imafc/ilp32f/libgcc.a(multf3.o)
+ .debug_line_str
+                0x000002fa      0x165 /usr/lib/gcc/riscv64-unknown-elf/13.2.0/rv32imafc/ilp32f/libgcc.a(subtf3.o)
+ .debug_line_str
+                0x000002fa      0x167 /usr/lib/gcc/riscv64-unknown-elf/13.2.0/rv32imafc/ilp32f/libgcc.a(fixtfsi.o)
+ .debug_line_str
+                0x000002fa      0x170 /usr/lib/gcc/riscv64-unknown-elf/13.2.0/rv32imafc/ilp32f/libgcc.a(fixunstfsi.o)
+ .debug_line_str
+                0x000002fa      0x16d /usr/lib/gcc/riscv64-unknown-elf/13.2.0/rv32imafc/ilp32f/libgcc.a(floatsitf.o)
+ .debug_line_str
+                0x000002fa      0x173 /usr/lib/gcc/riscv64-unknown-elf/13.2.0/rv32imafc/ilp32f/libgcc.a(floatunsitf.o)
+ .debug_line_str
+                0x000002fa      0x172 /usr/lib/gcc/riscv64-unknown-elf/13.2.0/rv32imafc/ilp32f/libgcc.a(extenddftf2.o)
+ .debug_line_str
+                0x000002fa      0x150 /usr/lib/gcc/riscv64-unknown-elf/13.2.0/rv32imafc/ilp32f/libgcc.a(_clzsi2.o)
+
+.debug_frame    0x00000000      0x2ac
+ .debug_frame   0x00000000       0x20 /usr/lib/gcc/riscv64-unknown-elf/13.2.0/rv32imafc/ilp32f/libgcc.a(_lshrdi3.o)
+ .debug_frame   0x00000020       0x20 /usr/lib/gcc/riscv64-unknown-elf/13.2.0/rv32imafc/ilp32f/libgcc.a(_ashldi3.o)
+ .debug_frame   0x00000040       0x58 /usr/lib/gcc/riscv64-unknown-elf/13.2.0/rv32imafc/ilp32f/libgcc.a(addtf3.o)
+ .debug_frame   0x00000098       0x2c /usr/lib/gcc/riscv64-unknown-elf/13.2.0/rv32imafc/ilp32f/libgcc.a(eqtf2.o)
+ .debug_frame   0x000000c4       0x64 /usr/lib/gcc/riscv64-unknown-elf/13.2.0/rv32imafc/ilp32f/libgcc.a(multf3.o)
+ .debug_frame   0x00000128       0x58 /usr/lib/gcc/riscv64-unknown-elf/13.2.0/rv32imafc/ilp32f/libgcc.a(subtf3.o)
+ .debug_frame   0x00000180       0x2c /usr/lib/gcc/riscv64-unknown-elf/13.2.0/rv32imafc/ilp32f/libgcc.a(fixtfsi.o)
+ .debug_frame   0x000001ac       0x2c /usr/lib/gcc/riscv64-unknown-elf/13.2.0/rv32imafc/ilp32f/libgcc.a(fixunstfsi.o)
+ .debug_frame   0x000001d8       0x3c /usr/lib/gcc/riscv64-unknown-elf/13.2.0/rv32imafc/ilp32f/libgcc.a(floatsitf.o)
+ .debug_frame   0x00000214       0x38 /usr/lib/gcc/riscv64-unknown-elf/13.2.0/rv32imafc/ilp32f/libgcc.a(floatunsitf.o)
+ .debug_frame   0x0000024c       0x40 /usr/lib/gcc/riscv64-unknown-elf/13.2.0/rv32imafc/ilp32f/libgcc.a(extenddftf2.o)
+ .debug_frame   0x0000028c       0x20 /usr/lib/gcc/riscv64-unknown-elf/13.2.0/rv32imafc/ilp32f/libgcc.a(_clzsi2.o)
+
+.debug_rnglists
+                0x00000000      0xb8b
+ .debug_rnglists
+                0x00000000       0x93 /usr/lib/gcc/riscv64-unknown-elf/13.2.0/rv32imafc/ilp32f/libgcc.a(_divdi3.o)
+ .debug_rnglists
+                0x00000093       0x99 /usr/lib/gcc/riscv64-unknown-elf/13.2.0/rv32imafc/ilp32f/libgcc.a(_udivdi3.o)
+ .debug_rnglists
+                0x0000012c       0x65 /usr/lib/gcc/riscv64-unknown-elf/13.2.0/rv32imafc/ilp32f/libgcc.a(_moddi3.o)
+ .debug_rnglists
+                0x00000191       0x66 /usr/lib/gcc/riscv64-unknown-elf/13.2.0/rv32imafc/ilp32f/libgcc.a(_umoddi3.o)
+ .debug_rnglists
+                0x000001f7      0x248 /usr/lib/gcc/riscv64-unknown-elf/13.2.0/rv32imafc/ilp32f/libgcc.a(addtf3.o)
+ .debug_rnglists
+                0x0000043f       0x2a /usr/lib/gcc/riscv64-unknown-elf/13.2.0/rv32imafc/ilp32f/libgcc.a(eqtf2.o)
+ .debug_rnglists
+                0x00000469      0x394 /usr/lib/gcc/riscv64-unknown-elf/13.2.0/rv32imafc/ilp32f/libgcc.a(multf3.o)
+ .debug_rnglists
+                0x000007fd      0x24d /usr/lib/gcc/riscv64-unknown-elf/13.2.0/rv32imafc/ilp32f/libgcc.a(subtf3.o)
+ .debug_rnglists
+                0x00000a4a       0x3c /usr/lib/gcc/riscv64-unknown-elf/13.2.0/rv32imafc/ilp32f/libgcc.a(fixtfsi.o)
+ .debug_rnglists
+                0x00000a86       0x30 /usr/lib/gcc/riscv64-unknown-elf/13.2.0/rv32imafc/ilp32f/libgcc.a(fixunstfsi.o)
+ .debug_rnglists
+                0x00000ab6       0x3d /usr/lib/gcc/riscv64-unknown-elf/13.2.0/rv32imafc/ilp32f/libgcc.a(floatsitf.o)
+ .debug_rnglists
+                0x00000af3       0x3d /usr/lib/gcc/riscv64-unknown-elf/13.2.0/rv32imafc/ilp32f/libgcc.a(floatunsitf.o)
+ .debug_rnglists
+                0x00000b30       0x45 /usr/lib/gcc/riscv64-unknown-elf/13.2.0/rv32imafc/ilp32f/libgcc.a(extenddftf2.o)
+ .debug_rnglists
+                0x00000b75       0x16 /usr/lib/gcc/riscv64-unknown-elf/13.2.0/rv32imafc/ilp32f/libgcc.a(_clzsi2.o)

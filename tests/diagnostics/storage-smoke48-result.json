@@ -1,0 +1,21 @@
+{
+  "build": "0.1.0-smoke.48-read4-control",
+  "source": "User photographs of all three result pages",
+  "open_rc": 0,
+  "slot4_post": 1048613,
+  "read_rc": -2,
+  "read_start_attempted": true,
+  "read_start_token": 0,
+  "callback_count": 1,
+  "callback_token": 0,
+  "callback_rc": -2,
+  "read_elapsed_ms": 18,
+  "flush_attempted": false,
+  "snapshot_rc": -1,
+  "snapshot_published_count": 0,
+  "flags_hex": "00040025",
+  "captured_count_from_flags": 37,
+  "read_content_verified": false,
+  "inference": "READ started and delivered one matching failure callback, not an immediate unsupported-API return. FLUSH was skipped. Flags show 37 captured records, but smoke48 publishes count only after a complete validated snapshot. Its -1 cannot distinguish a service failure from a header mismatch. No valid host trace is available for the READ failure, so the specific host-side cause is not established.",
+  "next": "Keep FPGA and OS byte-identical. App-only snapshot forensics: failure stage, service RC, raw header and bounded raw payload. Preserve partial data without claiming it is a validated trace."
+}

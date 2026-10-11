@@ -1,0 +1,7 @@
+ChisBurner
+
+GBA ROM 4 KiB read-only field diagnostic.
+
+This build permits exactly 256 aligned 32-byte reads inside ROM byte addresses
+0x00000000-0x00000FFF: two complete passes. It compares both CRC-32 values and
+every byte. Cartridge writes and save-memory transactions are unavailable.

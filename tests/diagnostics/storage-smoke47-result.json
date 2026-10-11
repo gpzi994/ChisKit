@@ -1,0 +1,43 @@
+{
+  "build": "0.1.0-smoke.47-host-audit",
+  "source": "User photographs of pages 1, 2, 3 and 4 of 10",
+  "pocket_firmware_previously_reported": "2.6",
+  "open_rc": 0,
+  "flush_rc": -12,
+  "snapshot_rc": 0,
+  "events": 42,
+  "flags_hex": "0004002A",
+  "legacy_hex": "DF3F1C60",
+  "capture_ms_displayed": 47648,
+  "open": {
+    "f8_read_tx_write": [31, 32, 8],
+    "matching_command_busy_ok": [4, 1, 1],
+    "first_last_command_hex": ["636D0192", "62750000"],
+    "status_writes": 2,
+    "last_status_hex": "6F6B0000",
+    "slot_seen": true,
+    "slot": 4,
+    "size_seen": false,
+    "table_reads": 0,
+    "all_tx_queued_done_abort": [102, 102, 0],
+    "other_read_tx_lost": [0, 1, 0],
+    "begin_end_ticks_hex": ["0000B565", "0012D37F"]
+  },
+  "flush": {
+    "f8_read_tx_write": [5048764, 5048764, 0],
+    "matching_command_busy_ok": [721252, 0, 0],
+    "first_last_command_hex": ["62750000", "636D0188"],
+    "status_writes": 0,
+    "slot_seen": true,
+    "slot": 4,
+    "size_seen": false,
+    "table_reads": 0,
+    "all_tx_queued_done_abort": [5048764, 5048764, 0],
+    "last_read_address_hex": "F800102C",
+    "last_tx_address_data_hex": ["F800102C", "00000000"],
+    "other_read_tx_lost": [0, 0, 0],
+    "begin_end_ticks_hex": ["0012D380", "D2DFC5D4"]
+  },
+  "inference": "OPEN has actual host busy/completion writes. FLUSH has continued polling and local serializer completions but no F8 writes in the full recorded window. A CPU-only lost-ACK explanation is insufficient; local TX completion still does not prove host decoding. SIZE NO is absence of an observed table reply, not zero file size.",
+  "next": "Keep smoke47 FPGA and OS bytes fixed. Add one SDK direct async 4-byte read at offset 0 of slot 4 between OPEN and FLUSH; stop on read failure. OPEN-window stats now include the read. Do not use POSIX cached reads as proof of a new host request."
+}

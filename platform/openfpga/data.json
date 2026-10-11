@@ -1,0 +1,38 @@
+{
+  "data": {
+    "magic": "APF_VER_1",
+    "data_slots": [
+      {
+        "id": 0,
+        "name": "Tool",
+        "required": true,
+        "parameters": 275,
+        "extensions": ["json"]
+      },
+      {
+        "id": 1,
+        "name": "OS Binary",
+        "required": false,
+        "parameters": 0,
+        "extensions": ["bin"],
+        "deferload": true
+      },
+      {
+        "id": 2,
+        "name": "OS Config",
+        "required": false,
+        "parameters": 0,
+        "extensions": ["ini"],
+        "deferload": true
+      },
+      {
+        "id": 3,
+        "name": "Application",
+        "required": false,
+        "parameters": 0,
+        "extensions": ["elf"],
+        "deferload": true
+      }
+    ]
+  }
+}

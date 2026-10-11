@@ -1,0 +1,26 @@
+{
+  "test": "smoke.44 host handshake trace",
+  "pocket_firmware_user_reported": "V2.6",
+  "user_output_verbatim": [
+    "OPEN FLUSH NO WRITE",
+    "FLUSH FAIL RC=-12",
+    "ACK TIMEOUT#40 ST=DF3F1C60"
+  ],
+  "trace": "DF3F1C60",
+  "host_menu_after_timeout": "User can open Analogue menu, exit core normally and return to menu",
+  "decoder": "tests/decode-storage-trace.ps1",
+  "core_side_observations": {
+    "flush_request_queued_and_launched": true,
+    "host_read_command_address": true,
+    "host_read_slot_parameter_address": true,
+    "host_status_write_seen": false,
+    "cpu_ack_or_done_seen": false,
+    "bridge_write_idle": true
+  },
+  "not_established": [
+    "Exact values received by the Pocket host over the physical bridge",
+    "Runtime slot 4 ID and size table validity",
+    "Whether the host attempted a response that was lost before core_bridge_cmd"
+  ],
+  "hardware_flush_fixed": false
+}

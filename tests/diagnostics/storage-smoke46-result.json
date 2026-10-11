@@ -1,0 +1,30 @@
+{
+  "build": "0.1.0-smoke.46-host-events",
+  "source": "User photographs, summary and pages 2, 3, 4, 44 of 44",
+  "pocket_firmware_reported_previously": "2.6",
+  "open_rc": 0,
+  "flush_rc": -12,
+  "slot4_post": 1048613,
+  "legacy_status": "DF3F1C60",
+  "snapshot_rc": 0,
+  "event_count": 256,
+  "flags": "00050100",
+  "overflow": true,
+  "collision": false,
+  "slot_tx": "00000004",
+  "size_tx_seen_in_saved_events": false,
+  "table_read_records": 0,
+  "status_write_records": 0,
+  "selected_visible_events": [
+    {"index": 1, "kind": "TX", "address": "F8001000", "data": "62750000", "current": "F8001004"},
+    {"index": 7, "kind": "TX", "address": "F8001000", "data": "636D0188", "current": "F8001000"},
+    {"index": 9, "kind": "TX", "address": "F8001020", "data": "00000004", "current": "F8001020"},
+    {"index": 11, "kind": "TX", "address": "F8001024", "data": "00000000", "current": "F8001024"},
+    {"index": 13, "kind": "TX", "address": "F8001028", "data": "00000000", "current": "F8001028"},
+    {"index": 15, "kind": "TX", "address": "F800102C", "data": "00000000", "current": "F800102C"},
+    {"index": 17, "kind": "TX", "address": "F8001004", "data": "00000020", "current": "F8001004"},
+    {"index": 255, "kind": "TX", "ticks": "004E9AD", "address": "F8001004", "data": "00000020", "current": "F8001004"}
+  ],
+  "inference": "Command and slot are correct at FPGA serial queue. Host acceptance is not proven. Last saved event is about 4.3 ms after arming, not the timeout instant. Per-last-address dedup does not suppress multi-address polling loops.",
+  "next": "Keep smoke46 OS and boot MIF. Arm through SDK before OPEN. Capture OPEN and FLUSH windows without an intermediate freeze; per-field dedup plus full-window counters. Preserve record-overflow/collision indicators."
+}

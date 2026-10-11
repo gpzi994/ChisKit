@@ -1,0 +1,6 @@
+ChisBurner
+
+SDK integration smoke build for isolating the openFPGA core setup path.
+
+Version: 0.1.0-smoke.6
+This diagnostic build keeps the cartridge interface in a safe idle state.

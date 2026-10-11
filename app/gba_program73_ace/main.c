@@ -1,0 +1,6 @@
+#define PROGRAM65_IMAGE_BYTES 0x0084D500u
+#define PROGRAM65_BUILD_LABEL "smoke.73"
+#define PROGRAM65_PC_TITLE "GYAKUTEN_SAI"
+#define PROGRAM65_PC_GAME_CODE "ASBJ"
+
+#include "../gba_program65/main.c"

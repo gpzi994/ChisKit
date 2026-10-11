@@ -1,0 +1,35 @@
+{
+  "core": {
+    "magic": "APF_VER_1",
+    "metadata": {
+      "platform_ids": ["chisburner"],
+      "shortname": "ChisBurner",
+      "description": "GB/GBC and GBA cartridge dumper/programmer for Analogue Pocket",
+      "author": "ChisBurner",
+      "url": "",
+      "version": "0.1.0-smoke.96-load-fix",
+      "date_release": "2026-09-07"
+    },
+    "framework": {
+      "target_product": "Analogue Pocket",
+      "version_required": "2.2",
+      "sleep_supported": false,
+      "dock": {
+        "supported": true,
+        "analog_output": false
+      },
+      "hardware": {
+        "link_port": false,
+        "cartridge_adapter": 16777216
+      }
+    },
+    "cores": [
+      {
+        "name": "chisburner",
+        "id": 0,
+        "filename": "chis.rbf_r",
+        "chip32_vm": "loader.bin"
+      }
+    ]
+  }
+}

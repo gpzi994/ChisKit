@@ -1,0 +1,10 @@
+{
+  "instance": {
+    "magic": "APF_VER_1",
+    "data_slots": [
+      { "id": 1, "filename": "os.bin" },
+      { "id": 2, "filename": "chisburnerbase.ini" },
+      { "id": 3, "filename": "chisburnerbase.elf" }
+    ]
+  }
+}

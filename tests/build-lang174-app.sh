@@ -1,0 +1,5 @@
+#!/usr/bin/env bash
+set -euo pipefail
+cd "$(dirname "$0")/.."
+root="$PWD"
+make -C app/ui98 LANG174=1 RTC173=1 RTC172=1 SAVE171=1 FLASH170=1 RTC167=1 FLASH166=1 ROM164=1 EEPROM162=1 STREAM131=1 GPU_LEAN132=1 GBA_IDENTIFY133=1 GB_IDENTIFY134=1 TIMERS135=1 BUILD_DIR="$root/build/lang174-app" OBJ_DIR="$root/build/lang174-app"

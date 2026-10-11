@@ -1,0 +1,478 @@
+#------------------------------------------------------------------------------
+# SPDX-License-Identifier: Apache-2.0
+# SPDX-FileType: SOURCE
+# SPDX-FileCopyrightText: (c) 2026, ThinkElastic <Think@Elastic.com>
+#------------------------------------------------------------------------------
+
+# openfpgaOS Kernel Makefile
+# Builds bootloader (BRAM) + OS kernel (SDRAM)
+
+# Toolchain
+CROSS ?= $(shell which riscv64-unknown-elf-gcc >/dev/null 2>&1 && echo riscv64-unknown-elf- || echo riscv64-elf-)
+CC = $(CROSS)gcc
+AS = $(CROSS)gcc
+LD = $(CROSS)gcc
+OBJCOPY = $(CROSS)objcopy
+OBJDUMP = $(CROSS)objdump
+SIZE = $(CROSS)size
+NM = $(CROSS)nm
+
+# Target
+# Binary name
+FW_TARGET = $(BLD)/firmware
+
+# Target platform (inherited from top-level Makefile)
+# Default target: command line > environment > repo-root .target file
+# (written by `make use-<target>` at the root) > pocket.
+TARGET ?= $(strip $(shell cat ../../../.target 2>/dev/null))
+ifeq ($(TARGET),)
+override TARGET := pocket
+endif
+
+# Directories
+FPGA_CORE_DIR = ../../fpga/targets/$(TARGET)
+HAL_DIR = hal
+TARGET_DIR = targets/$(TARGET)
+KERNEL_DIR = kernel
+BOOT_DIR = targets/$(TARGET)/boot
+API_DIR = ../api
+SHARED_DIR = shared
+LIB_DIR = ../lib
+ISO9660_DIR = $(LIB_DIR)/iso9660
+
+# ── Per-target build dir ─────────────────────────────────────────────
+# Objects + firmware.elf/mif/os.bin land under bld/<target>/ so pocket,
+# mister and sim builds coexist and never clobber each other (mirrors the
+# FPGA bld/<job>/ model).  No target-switch object-clearing needed — each
+# target owns its own tree, switching is instant/incremental.
+BLD = bld/$(TARGET)
+
+# ── Boot ABI id ──────────────────────────────────────────────────────
+# The BRAM bootloader (firmware.mif, baked into the bitstream) and the OS
+# image (os.bin, deployed as boot.rom) must agree on the memory map — but
+# the CRC is content-, not layout-checked, so a wrong-target or stale pair
+# still "passes" and then black-boots (loads/runs at the wrong addresses).
+# This id is a hash of the target name + the memory-map constants the
+# bootloader bakes in.  It is BOTH -D'd into the bootloader (single source
+# of truth, see the boot compile rule) AND stamped into os.bin by
+# append_os_crc.py; boot.c compares them and halts with a visible error on
+# mismatch.  Derived, so it changes automatically on a target switch or a
+# target_platform.h memory-map edit — no manual version bump.
+BOOT_ABI := 0x$(shell { echo "$(TARGET)"; grep -hE '#define[[:space:]]+OF_TARGET_(SDRAM_BASE|SDRAM_SIZE|SDRAM_UNCACHED_BASE|CRAM0_BASE|CRAM0_BRIDGE|CRAM0_OS_OFFSET)[[:space:]]' $(TARGET_DIR)/target_platform.h 2>/dev/null; } | md5sum | cut -c1-8)
+
+# Compiler flags
+ARCH = rv32imafc
+ABI = ilp32f
+CFLAGS = -march=$(ARCH) -mabi=$(ABI) -Os -Wall -Wextra -fdiagnostics-color=always
+# Schedule for a dual-issue in-order pipeline (VexiiRiscv --decoders=2: the
+# mister target and pocket os20).  ISA-neutral — pure instruction
+# ordering, so the ONE os.bin still runs on every single-issue variant
+# (os25/os30), where in-order execution makes the ordering ~performance-
+# neutral.  sifive-7-series is GCC's closest dual-issue in-order model.
+CFLAGS += -mtune=sifive-7-series
+CFLAGS += -ffreestanding -nostdlib -nostartfiles
+CFLAGS += -ffunction-sections -fdata-sections
+CFLAGS += -fno-builtin
+CFLAGS += -fsingle-precision-constant
+CFLAGS += $(EXTRA_CFLAGS)
+# Cache-line align hot code so I$ refills are one transaction.
+CFLAGS += -falign-functions=64 -falign-loops=64
+# Don't auto-rewrite plain loops as memset/memcpy calls.
+CFLAGS += -fno-tree-loop-distribute-patterns
+CFLAGS += -I. -I$(HAL_DIR) -I$(TARGET_DIR) -I$(KERNEL_DIR) -I$(BOOT_DIR) -I$(API_DIR) -I$(SHARED_DIR) -I$(ISO9660_DIR)
+CFLAGS += -MMD -MP
+LTO_FLAGS = -flto=2
+
+# OS kernel flags (optimized for speed)
+OS_CFLAGS = $(filter-out -Os,$(CFLAGS)) -O2 $(LTO_FLAGS) -std=gnu11
+
+# Assembler flags
+ASFLAGS = -march=$(ARCH)_zicsr -mabi=$(ABI)
+
+# Linker flags
+LDFLAGS = -march=$(ARCH) -mabi=$(ABI)
+LDFLAGS += -T os.ld -nostdlib -nostartfiles
+LDFLAGS += -Wl,--gc-sections -Wl,--no-warn-rwx-segments
+LDFLAGS += -Wl,-Map=$(FW_TARGET).map
+LDFLAGS += $(LTO_FLAGS)
+
+# Libraries
+LIBGCC = $(shell $(CC) -march=$(ARCH) -mabi=$(ABI) -print-libgcc-file-name)
+LIBS = $(LIBGCC)
+
+# musl libc — provides memcmp/strncpy/etc. that the bootloader+OS call.
+# Auto-built on first use by build_musl.sh (downloads musl 1.2.5, patches
+# for ilp32f, cross-compiles).  Treated as a required dependency so a fresh
+# clone builds end-to-end; see the $(MUSL_LIBC) rule below.
+MUSL_DIR = ../musl
+MUSL_LIBC = $(MUSL_DIR)/lib/libc.a
+LIBS += $(MUSL_LIBC)
+CFLAGS += -I$(MUSL_DIR)/include
+OS_CFLAGS += -I$(MUSL_DIR)/include
+ifneq ($(filter -DCHISBURNER_SDRAM122=1 -DCHISBURNER_PSRAM127=1,$(EXTRA_CFLAGS)),)
+OS_CFLAGS += -I../../../../../core/sdram
+OS_DIAG_SECTIONS = --only-section=.app_fastdata
+endif
+
+# Source files - Bootloader (BRAM)
+BOOT_SRCS_C = $(BOOT_DIR)/boot.c
+BOOT_SRCS_S = $(BOOT_DIR)/start.S
+
+# Source files - HAL (portable)
+#
+# sw_mixer.c is always linked now: ONE os.bin runs on every bitstream and
+# picks the mixer backend at boot.  of_init() reads the HW_FEATURES
+# OF_HW_MIXER_HW bit and sets of_mixer_use_sw — 0 (HW audio_mixer.v MMIO) on
+# OS25/MiSTer/default Pocket, 1 (CPU software mixer) on the OS30 Pocket
+# variant that cuts audio_mixer.v.  The regs.h MIX_* macros branch on that
+# flag at runtime, so hal/mixer.c and targets/pocket/audio.c stay byte-
+# identical source.  No MIXER= flag is required.
+HAL_SRCS = $(HAL_DIR)/hal.c \
+           $(HAL_DIR)/platform.c \
+           $(HAL_DIR)/cache.c \
+           $(HAL_DIR)/mixer.c \
+           $(HAL_DIR)/sw_mixer.c \
+           $(HAL_DIR)/net.c \
+           $(HAL_DIR)/link.c \
+           $(HAL_DIR)/codec.c \
+           $(HAL_DIR)/lzw.c \
+           $(HAL_DIR)/disk.c \
+           $(HAL_DIR)/hid_mouse.c \
+           $(HAL_DIR)/memtest.c \
+           ../api/of_smp_tables.c
+
+# Optional debug force-override: MIXER=sw pins of_mixer_use_sw=1 (CPU software
+# mixer) regardless of the HW caps bit, for testing the SW path on a core that
+# still has audio_mixer.v.  Normal builds leave this unset and select at boot.
+ifeq ($(MIXER),sw)
+CFLAGS    += -DOF_MIXER_FORCE_SW
+OS_CFLAGS += -DOF_MIXER_FORCE_SW
+endif
+
+HAL_SRCS_S = $(HAL_DIR)/fast_mem.S
+
+# Source files - HAL (target-specific)
+TARGET_SRCS = $(TARGET_DIR)/video.c \
+              $(TARGET_DIR)/audio.c \
+              $(TARGET_DIR)/input.c \
+              $(TARGET_DIR)/save.c \
+              $(TARGET_DIR)/file.c \
+              $(TARGET_DIR)/analogizer.c \
+              $(TARGET_DIR)/terminal.c \
+              $(TARGET_DIR)/timer.c \
+              $(TARGET_DIR)/disk_boot.c \
+
+# SNAC is a Pocket peripheral driver, not a HAL contract the kernel
+# links against — only targets with the Analogizer/SNAC port build it
+# (sim models the Pocket periph, so it builds the same driver).
+# analogizer.c, by contrast, IS a HAL contract: kernel/syscall.c
+# answers the app-facing of_analogizer_* ecalls through it, so every
+# target needs at least the "not present" implementation.
+ifneq ($(filter $(TARGET),pocket sim),)
+TARGET_SRCS += $(TARGET_DIR)/snac.c
+endif
+
+# MiSTer: block-device layer + vendored FatFs (file/save HAL backend)
+ifeq ($(TARGET),mister)
+TARGET_SRCS += $(TARGET_DIR)/blockdev.c \
+               $(TARGET_DIR)/fatfs/ff.c \
+               $(TARGET_DIR)/fatfs/ffunicode.c
+endif
+
+# Source files - Kernel
+KERNEL_SRCS = $(KERNEL_DIR)/main.c \
+              $(KERNEL_DIR)/syscall.c \
+              $(KERNEL_DIR)/loader.c \
+              $(KERNEL_DIR)/config.c \
+              $(KERNEL_DIR)/misaligned.c \
+              $(KERNEL_DIR)/caps_table.c \
+              $(KERNEL_DIR)/services_table.c \
+              $(KERNEL_DIR)/of_malloc.c \
+              $(KERNEL_DIR)/irq.c \
+              $(KERNEL_DIR)/bank_preload.c \
+              $(ISO9660_DIR)/lib9660.c \
+              $(ISO9660_DIR)/iso9660_vfs.c
+
+# All sources
+ALL_C_SRCS = $(BOOT_SRCS_C) $(HAL_SRCS) $(TARGET_SRCS) $(KERNEL_SRCS)
+# Object path = $(BLD)/<src-with-leading-../-stripped>.o, so ../api and
+# ../lib sources land inside bld/<target>/ (as api/… and lib/…).
+OBJS = $(addprefix $(BLD)/,$(patsubst ../%,%,\
+         $(ALL_C_SRCS:.c=.o) $(BOOT_SRCS_S:.S=.o) $(HAL_SRCS_S:.S=.o)))
+
+ifneq ($(filter -DCART_NOR108=1,$(EXTRA_CFLAGS)),)
+NOR108_DIR = ../../../../../core/nor
+NOR108_SRCS = cfi.c recipe.c execute.c probe.c mori/chisburner_nor_db_data.c mori/chisburner_nor_db_lookup.c
+ifneq ($(filter -DCART_STREAM131=1,$(EXTRA_CFLAGS)),)
+NOR108_SRCS += stream131.c submit131.c
+endif
+ifneq ($(filter -DCART_NOR109=1,$(EXTRA_CFLAGS)),)
+NOR108_SRCS += board109.c board_probe109.c
+ifneq ($(filter -DCART_NOR110=1,$(EXTRA_CFLAGS)),)
+NOR108_SRCS += bank110.c bank_probe110.c
+endif
+endif
+OS_CFLAGS += -I$(NOR108_DIR)
+OBJS += $(BLD)/kernel/nor108.o $(addprefix $(BLD)/nor108/,$(NOR108_SRCS:.c=.o))
+$(BLD)/nor108/%.o: $(NOR108_DIR)/%.c
+	@mkdir -p $(dir $@)
+	$(CC) $(OS_CFLAGS) -c -o $@ $<
+endif
+
+# Per-target build dirs (bld/<target>/) mean pocket/mister/sim objects
+ifneq ($(filter -DCART_GB_SAVE175=1,$(EXTRA_CFLAGS)),)
+ifeq ($(filter -DCART_NOR108=1,$(EXTRA_CFLAGS)),)
+$(error CART_GB_SAVE175 requires CART_NOR108)
+endif
+OS_CFLAGS += -I../../../../../core
+OBJS += $(BLD)/gb_save175/gb_save175.o $(BLD)/gb_save175/mbc7179.o
+ifneq ($(filter -DCART_GB_RTC186=1,$(EXTRA_CFLAGS)),)
+OBJS += $(BLD)/gb_save175/rtc186.o
+ifneq ($(filter -DCART_GB_RTC189=1,$(EXTRA_CFLAGS)),)
+OBJS += $(BLD)/gb_save175/rtc189.o
+endif
+endif
+ifneq ($(filter -DCART_GB_RESTORE180=1,$(EXTRA_CFLAGS)),)
+OBJS += $(BLD)/gb_save175/restore180.o
+ifneq ($(filter -DCART_GB_RESTORE185=1,$(EXTRA_CFLAGS)),)
+OBJS += $(BLD)/gb_save175/mbc7_restore185.o
+endif
+endif
+$(BLD)/gb_save175/%.o: ../../../../../core/gb_save175/%.c
+	@mkdir -p $(dir $@)
+	$(CC) $(OS_CFLAGS) -c -o $@ $<
+endif
+
+# Per-target build dirs (bld/<target>/) mean pocket/mister/sim objects
+ifneq ($(filter -DCART_EEPROM139=1,$(EXTRA_CFLAGS)),)
+ifeq ($(filter -DCART_NOR108=1,$(EXTRA_CFLAGS)),)
+$(error CART_EEPROM139 requires CART_NOR108)
+endif
+
+SAVE139_DIR = ../../../../../core/save
+OS_CFLAGS += -I../../../../../core
+OBJS += $(BLD)/save139/eeprom139.o $(BLD)/save139/detect139.o $(BLD)/save139/probe139.o $(BLD)/save139/flash139.o
+$(BLD)/save139/%.o: $(SAVE139_DIR)/%.c
+	@mkdir -p $(dir $@)
+	$(CC) $(OS_CFLAGS) -c -o $@ $<
+endif
+
+ifneq ($(filter -DCART_SAVE158=1,$(EXTRA_CFLAGS)),)
+ifeq ($(filter -DCART_EEPROM139=1,$(EXTRA_CFLAGS)),)
+$(error CART_SAVE158 requires CART_EEPROM139)
+endif
+
+OBJS += $(BLD)/save139/restore158.o
+endif
+
+ifneq ($(filter -DCART_EEPROM162=1,$(EXTRA_CFLAGS)),)
+ifeq ($(filter -DCART_SAVE158=1,$(EXTRA_CFLAGS)),)
+$(error CART_EEPROM162 requires CART_SAVE158)
+endif
+endif
+
+# Per-target build dirs (bld/<target>/) mean pocket/mister/sim objects
+# never share a path — no cross-target contamination, no clear-on-switch.
+.DEFAULT_GOAL := all
+
+# ── Toolchain guard ──────────────────────────────────────────────────
+# LTO bytecode is locked to the exact compiler build, so objects made by the
+# host riscv64-elf-gcc and the firmware-container riscv64-unknown-elf-gcc can
+# NOT be linked together ("LTO version X instead of Y" fatal error).  Stamp
+# each bld/<target>/ with the compiler id and, if it changed since the tree
+# was built (a host↔container switch), fail EARLY (order-only, before any
+# compile/link) with a clear message — instead of a cryptic LTO error mid-
+# link.  Auto-deleting the objects here would race make's up-to-date cache
+# (it links the deleted files), so we ask for an explicit `make clean`.
+CC_ID := $(CROSS)$(shell $(CC) -dumpfullversion 2>/dev/null)
+$(BLD)/.ccid: FORCE
+	@mkdir -p $(BLD)
+	@if [ -s $@ ] && [ "$$(cat $@)" != "$(CC_ID)" ]; then \
+		printf '*** firmware: toolchain changed (%s -> %s).\n' "$$(cat $@)" "$(CC_ID)"; \
+		printf '*** LTO objects cannot mix across compilers — run: make clean\n'; \
+		exit 1; \
+	fi
+	@echo "$(CC_ID)" > $@
+FORCE:
+.PHONY: FORCE
+$(OBJS): | $(BLD)/.ccid
+
+# RAM size for MIF generation
+RAM_WORDS = 8192
+
+# Default target (contract-check first: a plain `make` here must not
+# produce an os.bin that bypassed the fw/os contract tripwire)
+all: contract-check $(FW_TARGET).bin $(FW_TARGET).mif $(FW_TARGET).lst $(BLD)/os.bin
+	$(SIZE) $(FW_TARGET).elf
+
+# Link
+$(FW_TARGET).elf: $(OBJS) os.ld $(MUSL_LIBC)
+	@mkdir -p $(BLD)
+	$(LD) $(LDFLAGS) -o $@ $(OBJS) $(LIBS)
+
+# Auto-build musl libc on first use (downloads + cross-compiles ~1 min).
+# The build runs with whatever toolchain is on PATH — inside the firmware
+# container that's riscv64-unknown-elf-gcc with picolibc headers.  Output
+# is gitignored.
+$(MUSL_LIBC):
+	@echo "[musl] libc.a missing — building (~1 min, downloads musl 1.2.5)..."
+	@bash $(MUSL_DIR)/build_musl.sh
+
+# Explicit entry point so callers can build musl with the SAME containerized
+# toolchain as the firmware: `firmware-container.sh musl` (the root
+# Makefile's `make sdk` uses this instead of asking for a host build).
+.PHONY: musl
+musl: $(MUSL_LIBC)
+
+# Full binary
+$(FW_TARGET).bin: $(FW_TARGET).elf
+	$(OBJCOPY) -O binary $< $@
+
+# BRAM image for MIF
+$(FW_TARGET).mif: $(FW_TARGET).elf
+	$(OBJCOPY) -O binary \
+		--only-section=.boot \
+		--only-section=.boot_data \
+		--only-section=.boot_bss \
+		--only-section=.fasttext \
+		--only-section=.fastdata \
+		$< $(BLD)/boot.bin
+	@echo "-- Firmware RAM initialization - $(RAM_WORDS) x 32-bit words" > $@
+	@echo "-- Auto-generated from boot sections" >> $@
+	@echo "" >> $@
+	@echo "WIDTH=32;" >> $@
+	@echo "DEPTH=$(RAM_WORDS);" >> $@
+	@echo "" >> $@
+	@echo "ADDRESS_RADIX=DEC;" >> $@
+	@echo "DATA_RADIX=HEX;" >> $@
+	@echo "" >> $@
+	@echo "CONTENT BEGIN" >> $@
+	@hexdump -v -e '1/4 "%08X\n"' $(BLD)/boot.bin | awk '{printf "%d : %s;\n", NR-1, $$1}' >> $@
+	@LAST=$$(hexdump -v -e '1/4 "%08X\n"' $(BLD)/boot.bin | wc -l); \
+	if [ $$LAST -lt $(RAM_WORDS) ]; then \
+		echo "[$$LAST..$$(($(RAM_WORDS)-1))] : 00000013;" >> $@; \
+	fi
+	@echo "END;" >> $@
+	@echo "Generated $@ with $$(hexdump -v -e '1/4 "%08X\n"' $(BLD)/boot.bin | wc -l) words of BRAM image"
+
+# OS binary (loaded by bootloader via deferload).  Includes the
+# split-memory sections: .text stays in CRAM0, .osdata_rodata and
+# .osdata_data have their LMA packed into CRAM0 right after .text
+# (AT> CRAM0 in os.ld).  The bootloader splits the blob at runtime
+# and streams the .rodata / .data portion directly to its SDRAM VMA.
+# `make os.bin` — the target-agnostic name the FPGA target Makefiles invoke
+# ($(FW_MAKE) os.bin); alias it to this target's bld/<target>/os.bin.
+.PHONY: os.bin contract-check
+os.bin: contract-check $(BLD)/os.bin
+
+# Fails the build when a contract-surface file (register map, memory
+# boundaries, app.ld, caps ABI) changed without an explicit decision --
+# see tools/contract-check.sh for the bless/bump flow.
+contract-check:
+	@bash ../../../tools/contract-check.sh
+
+$(BLD)/os.bin: $(FW_TARGET).elf
+	@mkdir -p $(BLD)
+	$(OBJCOPY) -O binary \
+		--only-section=.text \
+		--only-section=.osdata \
+		$(OS_DIAG_SECTIONS) \
+		$< $@
+	@python3 $(firstword $(wildcard $(BOOT_DIR)/append_os_crc.py) targets/pocket/boot/append_os_crc.py) $@ \
+		$$($(NM) $< | awk '$$3=="os_main"        {print $$1}') \
+		$$($(NM) $< | awk '$$3=="__os_bss_start" {print $$1}') \
+		$$($(NM) $< | awk '$$3=="__os_bss_end"   {print $$1}') \
+		$(BOOT_ABI)
+	@echo "Generated $@ ($$(wc -c < $@) bytes)"
+
+# Disassembly
+$(FW_TARGET).lst: $(FW_TARGET).elf
+	$(OBJDUMP) -d -S $< > $@
+
+# Compile rules
+#
+# Boot C sources use tighter function alignment than the rest of
+# the firmware (-falign-functions=4 vs =64) because the BRAM budget
+# is only 8 KB for .boot + .boot_bss + .fasttext and the 64-byte
+# alignment pads push .fasttext past the APP_BRAM_BASE (0x2000)
+# assertion.  The boot code isn't performance-critical (runs once),
+# so losing the I-cache line alignment is fine.
+$(BLD)/$(BOOT_DIR)/%.o: $(BOOT_DIR)/%.c
+	@mkdir -p $(dir $@)
+	$(CC) $(filter-out -falign-functions=64 -falign-loops=64,$(CFLAGS)) -falign-functions=4 -falign-loops=4 -DOF_TARGET_BOOT_ABI=$(BOOT_ABI)u -c -o $@ $<
+
+$(BLD)/$(BOOT_DIR)/%.o: $(BOOT_DIR)/%.S
+	@mkdir -p $(dir $@)
+	$(AS) $(ASFLAGS) -c -o $@ $<
+
+$(BLD)/$(HAL_DIR)/%.o: $(HAL_DIR)/%.S
+	@mkdir -p $(dir $@)
+	$(AS) $(ASFLAGS) -c -o $@ $<
+
+$(BLD)/$(HAL_DIR)/%.o: $(HAL_DIR)/%.c
+	@mkdir -p $(dir $@)
+	$(CC) $(OS_CFLAGS) -c -o $@ $<
+
+$(BLD)/$(TARGET_DIR)/%.o: $(TARGET_DIR)/%.c
+	@mkdir -p $(dir $@)
+	$(CC) $(OS_CFLAGS) -c -o $@ $<
+
+# syscall.c without LTO — LTO strips functions called only via
+# runtime-determined if-chains from the assembly trap handler.
+$(BLD)/$(KERNEL_DIR)/syscall.o: $(KERNEL_DIR)/syscall.c
+	@mkdir -p $(dir $@)
+	$(CC) $(filter-out -flto -flto=%,$(OS_CFLAGS)) -c -o $@ $<
+
+# irq.c without LTO — called from assembly trap handler via function pointer.
+$(BLD)/$(KERNEL_DIR)/irq.o: $(KERNEL_DIR)/irq.c
+	@mkdir -p $(dir $@)
+	$(CC) $(filter-out -flto -flto=%,$(OS_CFLAGS)) -c -o $@ $<
+
+$(BLD)/$(KERNEL_DIR)/%.o: $(KERNEL_DIR)/%.c
+	@mkdir -p $(dir $@)
+	$(CC) $(OS_CFLAGS) -c -o $@ $<
+
+# ../api and ../lib sources: object paths have the leading ../ stripped,
+# so they build under bld/<target>/api/ and bld/<target>/lib/.  (api used
+# make's implicit %.o:%.c rule before — keep its $(CFLAGS) to match.)
+$(BLD)/api/%.o: $(API_DIR)/%.c
+	@mkdir -p $(dir $@)
+	$(CC) $(CFLAGS) -c -o $@ $<
+
+$(BLD)/lib/iso9660/%.o: $(ISO9660_DIR)/%.c
+	@mkdir -p $(dir $@)
+	$(CC) $(OS_CFLAGS) -c -o $@ $<
+
+# Auto-dependency files (header tracking) — under bld/<target>/ with the objects.
+DEPS = $(OBJS:.o=.d)
+-include $(DEPS)
+
+# Install MIF to FPGA (contract-checked: boot.c compiles against regs.h)
+install: contract-check $(FW_TARGET).mif
+	@mkdir -p $(FPGA_CORE_DIR)
+	cp $(FW_TARGET).mif $(FPGA_CORE_DIR)/firmware.mif
+	@echo "MIF installed to $(FPGA_CORE_DIR)/firmware.mif"
+
+# Clean — wipes every target's build tree (bld/), plus a sweep of the old
+# pre-bld/ in-place objects/artifacts so a checkout that predates the split
+# tidies up.
+clean:
+	rm -rf bld
+	rm -f os.bin firmware.elf firmware.bin firmware.mif firmware.map firmware.lst boot.bin .last_target
+	rm -f hal/*.o hal/*.d kernel/*.o kernel/*.d targets/*/*.o targets/*/*.d \
+	      targets/*/boot/*.o targets/*/boot/*.d targets/*/fatfs/*.o targets/*/fatfs/*.d \
+	      ../api/*.o ../api/*.d ../lib/iso9660/*.o ../lib/iso9660/*.d
+
+rebuild: clean all
+
+mem: $(FW_TARGET).elf
+	$(SIZE) -A -x $(FW_TARGET).elf
+
+# Run the SDK app portability acceptance checks. See
+# tools/check_api_portability.sh for what it verifies. Catches
+# regressions in the API contract that would prevent a single SDK
+# app .elf from running on multiple targets.
+check-api:
+	@bash ../../../tools/check_api_portability.sh
+
+.PHONY: all clean rebuild install mem check-api
