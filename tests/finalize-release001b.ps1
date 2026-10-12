@@ -4,6 +4,11 @@ $pub="$root/build/publish/ChisKit-0.01b"
 $src="$pub/Source"
 $base="$root/build/releases/gb208/ChisKit-0.1b/SD_ROOT"
 $sd="$pub/Firmware/SD_ROOT"
+foreach($p in @('Platforms/_images/chiskit.bin','Cores/Alius.chiskit/icon.bin')){
+ $target=Join-Path $sd $p
+ New-Item -ItemType Directory -Path (Split-Path $target) -Force | Out-Null
+ Copy-Item -LiteralPath "$root/platform/openfpga/$p" -Destination $target -Force
+}
 foreach($p in @('Assets/chiskit/common/os.bin','Cores/Alius.chiskit/chiskit.rbf_r')){
  if((Get-FileHash "$sd/$p").Hash-ne(Get-FileHash "$base/$p").Hash){throw "Hardware baseline changed: $p"}
 }
