@@ -22,10 +22,6 @@ ChisKit is a cartridge utility for Analogue Pocket. Back up ROMs and saves, rest
 | RTC read, backup, restore and manual editing | Supported MBC3 / MBC30 clock cartridges | Cartridges with a detected, supported RTC |
 | Interface | Chinese / English; light / dark themes | Chinese / English; light / dark themes |
 
-GB/GBC and GBA have separate platform-specific handling. Pocket system menus and output filenames remain in English. Backup filenames include identifiable game information where available.
-
-RTC options appear only when support is detected. RTC restoration also requires clock data in the selected save, with optional elapsed-time compensation. GB RTC editing does not offer synchronization to the Pocket calendar.
-
 ## 📦 Installation
 
 You need an openFPGA-capable Analogue Pocket, a microSD card and your cartridge.
@@ -35,7 +31,7 @@ You need an openFPGA-capable Analogue Pocket, a microSD card and your cartridge.
 3. If transferring over USB, safely eject the device and leave USB mode when finished.
 4. Launch ChisKit from openFPGA on your Pocket.
 
-Update the application, OS and FPGA files together; do not mix versions. Installation does not require compilation. The source archive is for inspection, modification and rebuilding. No commercial game ROMs or user saves are included.
+Update the application, OS and FPGA files together; do not mix versions.
 
 ## 💾 Usage
 
@@ -47,9 +43,9 @@ Update the application, OS and FPGA files together; do not mix versions. Install
 
 To edit the clock, analyze the cartridge first. Once RTC support is confirmed, press **X** on the main screen to open the platform-specific RTC editor. Read and freely edit the clock values, then follow the on-screen prompts to confirm writing them to the cartridge.
 
-The ROM and SAV file selectors can access `Saves/chiskit/common/`. Output files use the same directory so backups can be selected for restoration. Never restore a different game's save by mistake.
+The ROM and SAV file selectors can access `Saves/chiskit/common/`. Output files use the same directory so backups can be selected for restoration.
 
-A disabled action usually means analysis is incomplete, the type is unresolved, or the operation is unsupported. Manual save-type selection does not make arbitrary hardware safe to write.
+Manual save-type selection is supported.
 
 ## ⚠️ Compatibility and limitations
 
@@ -70,8 +66,6 @@ bash tests/build-release001b.sh
 ```
 
 The verified environment uses RISC-V GCC 13.2.0. Other tools include make, Python 3, host GCC and Icarus Verilog for RTL simulation. The FPGA project is `quartus/ap_core.qpf`, built with Quartus Prime Lite 25.1std.
-
-The build script generates the OS with the ChisKit splash screen and updates `quartus/firmware.mif`. Build the matching FPGA image afterward; do not replace only `os.bin` while keeping an older FPGA image. The splash artwork and bitmap generation script are included in the project.
 
 ## 💬 Feedback
 

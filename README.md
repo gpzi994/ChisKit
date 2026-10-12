@@ -22,10 +22,6 @@ ChisKit 是运行在 Analogue Pocket 上的卡带工具，提供 ROM 与存档�
 | RTC 读取、备份、恢复、自由修改 | 受支持的 MBC3 / MBC30 时钟卡 | 检测到受支持 RTC 的卡带 |
 | 界面 | 中文 / English；浅色 / 深色主题 | 中文 / English；浅色 / 深色主题 |
 
-GB/GBC 与 GBA 使用各自的平台处理逻辑。Pocket 系统菜单和输出文件名保持英文；备份文件名包含可识别的游戏信息。
-
-RTC 选项仅在检测到支持时开放。恢复 RTC 还需要存档包含对应时钟数据，可选择补偿备份后经过的时间。GB RTC 不提供同步 Pocket 日期时间功能。
-
 ## 📦 安装
 
 准备支持 openFPGA 的 Analogue Pocket、microSD 卡和需要操作的卡带。
@@ -35,7 +31,7 @@ RTC 选项仅在检测到支持时开放。恢复 RTC 还需要存档包含对�
 3. 若使用 USB 传输，完成后安全弹出并退出 USB 模式。
 4. 在 Pocket 的 openFPGA 中启动 ChisKit。
 
-请配套更新应用、OS 和 FPGA 文件，不要混用版本。安装无需自行编译；源码包供审查、修改和重建。本项目不包含商业游戏 ROM 或用户存档。
+请配套更新应用、OS 和 FPGA 文件，不要混用版本。
 
 ## 💾 使用方法
 
@@ -47,9 +43,9 @@ RTC 选项仅在检测到支持时开放。恢复 RTC 还需要存档包含对�
 
 需要编辑时钟时，先分析卡带；确认卡带支持 RTC 后，在主页面按 **X** 打开对应平台的 RTC 编辑页面，读取并自由修改时钟信息，按页面提示确认写入。
 
-ROM 和 SAV 文件选择入口可访问 `Saves/chiskit/common/`，输出文件也使用此目录，方便将备份重新用于恢复。不要把其他游戏的 SAV 当成当前卡带的存档。
+ROM 和 SAV 文件选择入口可访问 `Saves/chiskit/common/`，输出文件也使用此目录，方便将备份重新用于恢复。
 
-入口灰色通常表示尚未完成分析、类型未确定或操作不受支持。手动存档类型设置不代表任意硬件配置都可以安全写入。
+支持手动选择存档类型。
 
 ## ⚠️ 兼容范围与限制
 
@@ -70,8 +66,6 @@ bash tests/build-release001b.sh
 ```
 
 验证环境使用 RISC-V GCC 13.2.0；其他工具包括 make、Python 3、host GCC，以及 RTL 仿真所需的 Icarus Verilog。FPGA 工程为 `quartus/ap_core.qpf`，使用 Quartus Prime Lite 25.1std。
-
-构建脚本会生成带 ChisKit 启动页的 OS，并更新 `quartus/firmware.mif`。随后需构建配套 FPGA 固件；不要仅替换 `os.bin` 后搭配旧 FPGA 固件。启动图源文件与点阵生成脚本已包含在项目中。
 
 ## 💬 反馈
 
