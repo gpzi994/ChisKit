@@ -35,8 +35,7 @@ foreach($s in $data.data.data_slots){
  if($s.id-eq20){$s.name='Saves ROM'}
 }
 WriteJson "$core/data.json" $data
-$platform=Get-Content "$base/SD_ROOT/Platforms/chisburner.json" -Raw|ConvertFrom-Json
-$platform.platform.name='chiskit';$platform.platform.manufacturer='Alius'
+$platform=Get-Content "$root/platform/openfpga/chiskit.json" -Raw|ConvertFrom-Json
 WriteJson "$dst/SD_ROOT/Platforms/chiskit.json" $platform
 Copy-Item $app "$assets/chiskit.elf"
 Copy-Item "$os/os.bin" "$assets/os.bin"

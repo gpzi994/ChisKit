@@ -96,7 +96,7 @@ $data = Get-Content -Raw -LiteralPath (Join-Path $oldCore 'data.json') | Convert
     ($data | ConvertTo-Json -Depth 20), $utf8)
 [IO.File]::WriteAllText((Join-Path $coreRoot 'info.txt'),
     'ChisBurner smoke.96: Pocket metadata and filename load fix; logic unchanged.', $utf8)
-Copy-Item -LiteralPath (Join-Path $root 'platform/openfpga/chisburner.json') -Destination (Join-Path $platformRoot 'chisburner.json')
+Copy-Item -LiteralPath (Join-Path $root 'platform/openfpga/chiskit.json') -Destination (Join-Path $platformRoot 'chisburner.json')
 
 $oldOs = Join-Path $oldCommon 'os.bin'
 $newOs = Join-Path $common 'os.bin'
