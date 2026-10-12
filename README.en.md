@@ -31,7 +31,7 @@ RTC options appear only when support is detected. RTC restoration also requires 
 You need an openFPGA-capable Analogue Pocket, a microSD card and your cartridge.
 
 1. Obtain the release file `ChisKit-0.01b-firmware.zip`. Back up important microSD files first.
-2. Extract it and merge `Assets`, `Cores`, `Platforms` and `Saves` from `Firmware/SD_ROOT/` into the card root. Do not delete existing directories.
+2. Extract it and merge `Assets`, `Cores`, `Platforms` and `Saves` from the ZIP root into the card root. Do not delete existing directories.
 3. If transferring over USB, safely eject the device and leave USB mode when finished.
 4. Launch ChisKit from openFPGA on your Pocket.
 

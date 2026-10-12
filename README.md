@@ -31,7 +31,7 @@ RTC 选项仅在检测到支持时开放。恢复 RTC 还需要存档包含对�
 准备支持 openFPGA 的 Analogue Pocket、microSD 卡和需要操作的卡带。
 
 1. 获取发布时提供的 `ChisKit-0.01b-firmware.zip`，先备份卡内的重要文件。
-2. 解压，将 `Firmware/SD_ROOT/` 内的 `Assets`、`Cores`、`Platforms`、`Saves` 合并到卡根目录，不要删除原有目录。
+2. 解压，将 ZIP 根目录内的 `Assets`、`Cores`、`Platforms`、`Saves` 合并到卡根目录，不要删除原有目录。
 3. 若使用 USB 传输，完成后安全弹出并退出 USB 模式。
 4. 在 Pocket 的 openFPGA 中启动 ChisKit。
 
