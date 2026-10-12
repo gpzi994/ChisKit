@@ -5,6 +5,7 @@
 /quartus/db/
 /quartus/incremental_db/
 /.integration/openfpgaos/bld/
+/.integration/openfpgaos/src/firmware/os/bld/
 /.integration/openfpgaos/build/
 __pycache__/
 *.pyc
