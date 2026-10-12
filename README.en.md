@@ -66,10 +66,12 @@ To build the application and OS on Linux / WSL, run:
 
 ```bash
 export OPENFPGA_SDK="$PWD/dependencies/openfpgaSDK"
-bash tests/build-gb-rtc189.sh release001b
+bash tests/build-release001b.sh
 ```
 
 The verified environment uses RISC-V GCC 13.2.0. Other tools include make, Python 3, host GCC and Icarus Verilog for RTL simulation. The FPGA project is `quartus/ap_core.qpf`, built with Quartus Prime Lite 25.1std.
+
+The build script generates the OS with the ChisKit splash screen and updates `quartus/firmware.mif`. Build the matching FPGA image afterward; do not replace only `os.bin` while keeping an older FPGA image. The splash artwork and bitmap generation script are included in the project.
 
 ## 💬 Feedback
 

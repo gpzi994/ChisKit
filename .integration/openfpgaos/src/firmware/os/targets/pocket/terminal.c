@@ -17,6 +17,10 @@
 #include "cache.h"
 #include <stdarg.h>
 #include <string.h>
+#ifdef CHISKIT_SPLASH
+#include "chiskit_splash.h"
+static int splash_active;
+#endif
 
 /* ── 8x8 CP437 font (256 glyphs, 2048 bytes) ──────────────────────── */
 const uint8_t font8x8[2048] __attribute__((section(".fastrodata"))) = {
@@ -235,6 +239,9 @@ static const uint32_t glyph_nib_mask[16] __attribute__((section(".fastrodata")))
  * the same AXI round trip as a byte store.
  */
 static void term_blit_glyph(int col, int row, uint8_t ch, uint8_t fg_idx, uint8_t bg_idx) {
+#ifdef CHISKIT_SPLASH
+    if (splash_active) return;
+#endif
     const uint8_t *glyph = &font8x8[(unsigned)ch * 8];
     uint32_t fgw = (uint32_t)fg_idx * 0x01010101u;
     uint32_t bgw = (uint32_t)bg_idx * 0x01010101u;
@@ -295,8 +302,13 @@ void of_term_clear(void) {
     /* Clear terminal framebuffer to palette index 0 (black) through the
      * cached alias, then cbo.flush the range for the continuously-reading
      * scanout — ~8 ms of uncached word stores becomes well under 1 ms. */
-    memset(TERM_FB_CACHED, 0, FB_WIDTH * FB_HEIGHT);
-    of_cache_flush_range(TERM_FB_CACHED, FB_WIDTH * FB_HEIGHT);
+#ifdef CHISKIT_SPLASH
+    if (!splash_active)
+#endif
+    {
+        memset(TERM_FB_CACHED, 0, FB_WIDTH * FB_HEIGHT);
+        of_cache_flush_range(TERM_FB_CACHED, FB_WIDTH * FB_HEIGHT);
+    }
 
     term_col = 0;
     term_row = 0;
@@ -314,6 +326,9 @@ void of_term_scroll(void) {
     uint8_t clr = term_color_byte(term_fg, term_bg);
     memset(term_chars  + total, ' ', stride);
     memset(term_colors + total, clr, stride);
+#ifdef CHISKIT_SPLASH
+    if (splash_active) return;
+#endif
 
     /* Scroll terminal framebuffer: move pixel rows 8..239 up to 0..231.
      * Copy through the cached alias (burst line fills instead of an
@@ -656,7 +671,36 @@ void of_term_reset(void) {
 
 void of_term_set_display_mode(int mode) {
     term_display_mode = mode;
+#ifdef CHISKIT_SPLASH
+    /* Once the app owns display, restore ordinary terminal rendering. */
+    if (mode != 0 && splash_active) {
+        splash_active = 0;
+        of_term_redraw();
+    }
+#endif
 }
+
+#ifdef CHISKIT_SPLASH
+void chiskit_boot_splash_begin(void) {
+    uint8_t *fb = TERM_FB_CACHED;
+    memset(fb, 0, FB_WIDTH * FB_HEIGHT);
+    for (unsigned y = 0; y < 102; ++y)
+        for (unsigned x = 0; x < 304; ++x)
+            fb[(y + 61) * FB_WIDTH + x + 8] =
+                (chiskit_splash[y * 38 + x / 8] & (0x80u >> (x & 7))) ? 15 : 0;
+    of_cache_flush_range(fb, FB_WIDTH * FB_HEIGHT);
+    const char *s = "Loading...";
+    for (int i = 0; s[i]; ++i)
+        term_blit_glyph(15 + i, 23, (uint8_t)s[i], 15, 0);
+    splash_active = 1;
+}
+
+void chiskit_boot_splash_end(void) {
+    if (!splash_active) return;
+    splash_active = 0;
+    of_term_redraw();
+}
+#endif
 
 /* Minimal printf for terminal output */
 static void put_uint(uint32_t val, int base, int uppercase,

@@ -142,6 +142,9 @@ static void status_ok(void) {
 
 static void status_fail(void) {
     of_term_puts(" \033[91mFAIL\033[0m\n");
+#ifdef CHISKIT_SPLASH
+    of_video_console_reveal();
+#endif
 }
 
 static int app_load_transient(int rc) {
@@ -440,6 +443,10 @@ void os_main(void) {
      * register map is not touched until the handshake and memtest
      * below have vouched for the core/os pairing. */
     of_init_early();
+#ifdef CHISKIT_SPLASH
+    extern void chiskit_boot_splash_begin(void);
+    chiskit_boot_splash_begin();
+#endif
 
     /* Boot stage: red logo = OS initializing */
     boot_logo("\033[91m");  /* red */
@@ -458,6 +465,10 @@ void os_main(void) {
             of_term_puts("\n  \033[93mWARN contract unverified\033[0m\n");
             of_timer_delay_ms(3000);
         } else if (hw_rev != OS_EXPECTED_HW_CONTRACT) {
+#ifdef CHISKIT_SPLASH
+            extern void chiskit_boot_splash_end(void);
+            chiskit_boot_splash_end();
+#endif
             for (;;) {
                 of_term_printf("\n  \033[91mCONTRACT FAIL %u/%u\033[0m\n",
                                (unsigned)hw_rev,
@@ -886,7 +897,9 @@ psram129_fail:
 #endif
 
     /* Brief pause to show banner */
+#ifndef CHISKIT_SPLASH
     of_timer_delay_ms(800);
+#endif
     os_textguard_check("after config_load");
 
     /* Load application ELF */
@@ -1014,7 +1027,9 @@ psram129_fail:
             of_term_enable_uart_mirror();
     }
 
+#ifndef CHISKIT_SPLASH
     of_timer_delay_ms(300);
+#endif
 
     /* Boot stage: blue logo = launching app. Save/restore cursor so
      * the redraw (which jumps to 0,0) doesn't leave the cursor inside
@@ -1026,7 +1041,9 @@ psram129_fail:
         boot_logo("\033[94m");  /* blue */
         of_term_set_pos(saved_col, saved_row);
     }
+#ifndef CHISKIT_SPLASH
     of_timer_delay_ms(200);
+#endif
 
     /* Boot is done — every init/probe sector op above ran fail-fast.
      * From here on the target may treat transport timeouts as transient

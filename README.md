@@ -66,10 +66,12 @@ Linux / WSL 应用与 OS 构建，运行：
 
 ```bash
 export OPENFPGA_SDK="$PWD/dependencies/openfpgaSDK"
-bash tests/build-gb-rtc189.sh release001b
+bash tests/build-release001b.sh
 ```
 
 验证环境使用 RISC-V GCC 13.2.0；其他工具包括 make、Python 3、host GCC，以及 RTL 仿真所需的 Icarus Verilog。FPGA 工程为 `quartus/ap_core.qpf`，使用 Quartus Prime Lite 25.1std。
+
+构建脚本会生成带 ChisKit 启动页的 OS，并更新 `quartus/firmware.mif`。随后需构建配套 FPGA 固件；不要仅替换 `os.bin` 后搭配旧 FPGA 固件。启动图源文件与点阵生成脚本已包含在项目中。
 
 ## 💬 反馈
 

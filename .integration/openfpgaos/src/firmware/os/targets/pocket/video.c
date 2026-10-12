@@ -282,6 +282,10 @@ static void palette_upload_shadow(void) {
  * text printed AFTER the call needs another call to become visible on the
  * fb_direct path. */
 void of_video_console_reveal(void) {
+#ifdef CHISKIT_SPLASH
+    extern void chiskit_boot_splash_end(void);
+    chiskit_boot_splash_end();
+#endif
     video_program_terminal_mode();
     TERM_FB_CTRL = 1u;
 
