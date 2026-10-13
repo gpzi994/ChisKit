@@ -1,16 +1,18 @@
 $ErrorActionPreference='Stop'
+. "$PSScriptRoot/chiskit-package-layout.ps1"
 $root=[IO.Path]::GetFullPath((Join-Path $PSScriptRoot '..'))
 $pub="$root/build/publish/ChisKit-0.01b"
 $src="$pub/Source"
 $base="$root/build/releases/ChisKit-0.01b-splash209c-test/SD_ROOT"
 $sd="$pub/Firmware/SD_ROOT"
-foreach($p in @('Platforms/_images/chiskit.bin','Cores/Alius.chiskit/icon.bin')){
+Initialize-ChisKitCoreDirectory $sd
+foreach($p in @('Platforms/_images/chiskit.bin','Cores/Alius.ChisKit/icon.bin')){
  $target=Join-Path $sd $p
  New-Item -ItemType Directory -Path (Split-Path $target) -Force | Out-Null
  Copy-Item -LiteralPath "$root/platform/openfpga/$p" -Destination $target -Force
 }
-foreach($p in @('Assets/chiskit/common/os.bin','Cores/Alius.chiskit/chiskit.rbf_r')){
- if((Get-FileHash "$sd/$p").Hash-ne(Get-FileHash "$base/$p").Hash){throw "Hardware baseline changed: $p"}
+foreach($p in @('Assets/chiskit/common/os.bin','Cores/Alius.ChisKit/chiskit.rbf_r')){
+ if((Get-FileHash "$sd/$p").Hash-ne(Get-FileHash (Resolve-ChisKitBaselineFile $base $p)).Hash){throw "Hardware baseline changed: $p"}
 }
 foreach($p in @('build/gb-rtcrelease001b-app/app.elf','.integration/openfpgaos/src/firmware/os/bld/chiskit-splash209c/os.bin','.integration/openfpgaos/src/firmware/os/bld/chiskit-splash209c/firmware.mif')){
  if((Get-FileHash "$root/$p").Hash-ne(Get-FileHash "$src/$p").Hash){throw "Independent rebuild differs: $p"}
@@ -30,6 +32,7 @@ foreach($tree in @('Firmware','Source')){
  }
  [IO.File]::WriteAllLines("$baseTree/SHA256SUMS.txt",[string[]]$lines)
 }
+Assert-ChisKitPackageLayout $sd
 Push-Location $pub
 try{
  & tar.exe -a -cf ChisKit-0.01b-firmware.zip -C Firmware/SD_ROOT Cores Assets Platforms Saves

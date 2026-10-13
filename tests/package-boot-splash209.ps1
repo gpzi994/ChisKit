@@ -1,5 +1,6 @@
 param([switch]$Deploy, [ValidateSet('209b','209c')][string]$Variant='209b')
 $ErrorActionPreference = 'Stop'
+. "$PSScriptRoot/chiskit-package-layout.ps1"
 $root = [IO.Path]::GetFullPath((Join-Path $PSScriptRoot '..')).Replace('\','/')
 $fit = "$root/build/boot-splash209-quartus"
 $osSuffix = if ($Variant -eq '209c') { '209c' } else { '209' }
@@ -16,22 +17,24 @@ if ((Get-FileHash "$fit/firmware.mif").Hash -ne (Get-FileHash "$os/firmware.mif"
 $null = Assert-ChisBurnerOsIntegrity -Bytes ([IO.File]::ReadAllBytes("$os/os.bin"))
 New-Item -ItemType Directory -Path $dst | Out-Null
 Copy-Item -LiteralPath $base -Destination "$dst/SD_ROOT" -Recurse
+Initialize-ChisKitCoreDirectory "$dst/SD_ROOT"
 Copy-Item "$os/os.bin" "$dst/SD_ROOT/Assets/chiskit/common/os.bin" -Force
 Add-Type -TypeDefinition 'public static class ReverseSplash209 { public static byte[] Run(byte[] a) { for(int i=0;i<a.Length;i++){int x=a[i],y=0;for(int k=0;k<8;k++){y=(y<<1)|(x&1);x>>=1;}a[i]=(byte)y;}return a;} }'
 $rbf = [ReverseSplash209]::Run([IO.File]::ReadAllBytes("$fit/output_files/ap_core.rbf"))
-[IO.File]::WriteAllBytes("$dst/SD_ROOT/Cores/Alius.chiskit/chiskit.rbf_r", $rbf)
-$changed = @('Assets/chiskit/common/os.bin','Cores/Alius.chiskit/chiskit.rbf_r')
+[IO.File]::WriteAllBytes("$dst/SD_ROOT/Cores/Alius.ChisKit/chiskit.rbf_r", $rbf)
+$changed = @('Assets/chiskit/common/os.bin','Cores/Alius.ChisKit/chiskit.rbf_r')
 $manifest = @(Get-ChildItem "$dst/SD_ROOT" -Recurse -File | Sort-Object FullName | ForEach-Object {
     $p = $_.FullName.Substring(("$dst/SD_ROOT").Length+1).Replace('\','/')
     $hash = (Get-FileHash -LiteralPath $_.FullName).Hash
-    if ($p -notin $changed -and $hash -ne (Get-FileHash -LiteralPath "$base/$p").Hash) { throw "Unexpected change $p" }
+    if ($p -notin $changed -and $hash -ne (Get-FileHash -LiteralPath (Resolve-ChisKitBaselineFile $base $p)).Hash) { throw "Unexpected change $p" }
     "$hash  $p"
 })
 [IO.File]::WriteAllLines("$dst/SHA256SUMS.txt", [string[]]$manifest)
 Copy-Item "$root/docs/BOOT_SPLASH209B_TEST.md" "$dst/README.md"
+Assert-ChisKitPackageLayout "$dst/SD_ROOT"
 Compress-Archive -Path "$dst/SD_ROOT/*" -DestinationPath "$dst/ChisKit-0.01b-splash$Variant-test.zip"
 if ($Deploy) {
-    if (!(Test-Path 'E:/Cores/Alius.chiskit/core.json')) { throw 'Pocket not mounted at expected target' }
+    if (!(Test-Path 'E:/Cores/Alius.ChisKit/core.json')) { throw 'Pocket not mounted at expected target' }
     if ((Get-FileHash 'E:/Assets/chiskit/common/chiskit.elf').Hash -ne (Get-FileHash "$base/Assets/chiskit/common/chiskit.elf").Hash) { throw 'Unexpected installed application' }
     $backup = "$dst/pocket-backup-$(Get-Date -Format yyyyMMdd-HHmmss)"
     foreach ($p in $changed) {

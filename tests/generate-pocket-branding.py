@@ -11,11 +11,21 @@ root = Path(__file__).resolve().parents[1]
 parser = argparse.ArgumentParser()
 parser.add_argument('--sd-root', type=Path)
 args = parser.parse_args()
+def check_core_directory(base):
+    cores = base / 'Cores'
+    if cores.exists():
+        for entry in cores.iterdir():
+            if entry.name.lower() == 'alius.chiskit' and entry.name != 'Alius.ChisKit':
+                raise ValueError(f'Noncanonical core directory: {entry}; normalize before generating artwork')
+
+check_core_directory(root / 'platform/openfpga')
+if args.sd_root:
+    check_core_directory(args.sd_root)
 src = root / 'assets/branding'
 out = root / 'platform/openfpga'
 for name, size, relative in [
     ('banner', (521, 165), 'Platforms/_images/chiskit.bin'),
-    ('icon', (36, 36), 'Cores/Alius.chiskit/icon.bin'),
+    ('icon', (36, 36), 'Cores/Alius.ChisKit/icon.bin'),
 ]:
     im = Image.open(src / (name + '-source.png')).convert('L')
     im = im.resize(size, Image.Resampling.LANCZOS)
